@@ -1,40 +1,50 @@
-"""Fast logic tests, without a Reachy Mini or OpenAI key."""
 import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock
-from confusion_storytelling import parse_label, explicit_request, classify, mock_predict
+
+from confusion_storytelling import (STORIES, assistance_decision, classify,
+    explicit_request, interaction_stall, parse_label, rating)
 
 
-class ParsingTests(unittest.TestCase):
-    def test_correct_labels(self):
-        for label in ["CONFUSED", "NOT_CONFUSED", "UNCERTAIN"]:
+class StudyLogicTests(unittest.TestCase):
+    def test_story_shape_and_checkpoints(self):
+        for story in STORIES.values():
+            self.assertEqual(len(story), 6)
+            self.assertEqual(sum(t["formal"] for t in story), 3)
+
+    def test_locked_story_details(self):
+        self.assertIn("Emma", STORIES["A"][0]["narration"])
+        self.assertIn("key", " ".join(t["narration"] for t in STORIES["A"]).lower())
+        text = " ".join(t["narration"] for t in STORIES["B"])
+        self.assertIn("New York City", text); self.assertIn("sketchbook", text.lower())
+
+    def test_parse_labels_and_fail_safe(self):
+        for label in ("CONFUSED", "NOT_CONFUSED", "UNCERTAIN"):
             self.assertEqual(parse_label('{"label":"' + label + '"}'), label)
+        self.assertEqual(parse_label("confused"), "UNCERTAIN")
 
-    def test_malformed_fails_safe(self):
-        self.assertEqual(parse_label("The user seems confused."), "UNCERTAIN")
-        self.assertEqual(parse_label('{"label":"MAYBE"}'), "UNCERTAIN")
-        self.assertEqual(parse_label('{"label":"NOT_CONFUSED"}'), "NOT_CONFUSED")
+    def test_assistance_policy(self):
+        self.assertEqual(assistance_decision("UNCERTAIN", True, False, "assistance"), "soft_check_in")
+        self.assertEqual(assistance_decision("UNCERTAIN", False, False, "assistance"), "neutral")
+        self.assertEqual(assistance_decision("CONFUSED", False, False, "baseline"), "neutral")
+        self.assertEqual(assistance_decision("NOT_CONFUSED", False, True, "baseline"), "clarification")
 
-    def test_explicit_help(self):
-        self.assertTrue(explicit_request("Could you clarify what happened?"))
-        self.assertFalse(explicit_request("They should open the door."))
+    def test_stall_and_help_request(self):
+        self.assertTrue(interaction_stall("", None, None, 2500))
+        self.assertTrue(interaction_stall("maybe", 3000, None, 2500))
+        self.assertFalse(interaction_stall("They look at the bench", 100, None, 2500))
+        self.assertTrue(explicit_request("Could I have a hint?"))
 
-    def test_prompt_path(self):
+    def test_rating_ranges(self):
+        answers = iter(["7", "5"])
+        self.assertEqual(rating("", 5, lambda _: next(answers)), "5")
+
+    def test_classifier_sends_context_once(self):
         client = Mock()
-        client.chat.completions.create.return_value = SimpleNamespace(
-            choices=[SimpleNamespace(message=SimpleNamespace(content='{"label":"NOT_CONFUSED"}'))]
-        )
-        result = classify(client, "gpt-4.1-mini", "I think they should go outside", "Mira had a key")
-        self.assertEqual(result.label, "NOT_CONFUSED")
-        sent = client.chat.completions.create.call_args.kwargs
-        self.assertEqual(sent["model"], "gpt-4.1-mini")
-        self.assertEqual(sent["messages"][1]["content"].count("Mira had a key"), 1)
-
-    def test_mock_is_explicitly_mock(self):
-        prediction = mock_predict("Wait, I don't understand")
-        self.assertEqual(prediction.label, "CONFUSED")
-        self.assertIn("MOCK", prediction.error)
+        client.chat.completions.create.return_value = SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content='{"label":"NOT_CONFUSED"}'))])
+        self.assertEqual(classify(client, "model", "idea", "LOCKED FACT").label, "NOT_CONFUSED")
+        sent = client.chat.completions.create.call_args.kwargs["messages"][1]["content"]
+        self.assertEqual(sent.count("LOCKED FACT"), 1)
 
 
-if __name__ == "__main__":
-    unittest.main()
+if __name__ == "__main__": unittest.main()

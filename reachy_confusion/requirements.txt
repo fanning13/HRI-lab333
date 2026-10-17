@@ -3,3 +3,4 @@ python-dotenv>=1.0
 reachy-mini
 opencv-python
 numpy
+webrtcvad-wheels>=2.0.14
