@@ -10,3 +10,28 @@
 *.toc
 *.bbl
 *.blg
+
+#ignore env files
+.env
+reachy_confusion/.env
+
+#ignore all pycache files
+__pycache__/
+
+#ignore all pyc files
+*.pyc
+
+#ignore all pyo files
+*.pyo
+
+#ignore all pyd files
+*.pyd
+
+#ignore all pyw files
+*.pyw
+
+#ignore all venv files
+venv/
+
+#ignore all files in .venv directory
+.venv/

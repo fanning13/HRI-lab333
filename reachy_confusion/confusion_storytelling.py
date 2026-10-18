@@ -366,7 +366,7 @@ def main() -> None:
     p.add_argument("--demo", action="store_true"); p.add_argument("--no-tts", action="store_true"); p.add_argument("--skip-survey", action="store_true")
     p.add_argument("--record-seconds", type=float, default=7.0); p.add_argument("--end-silence-ms", type=int, default=1000)
     p.add_argument("--stall-threshold-ms", type=float, default=2500); p.add_argument("--vad-aggressiveness", type=int, choices=range(4), default=2)
-    p.add_argument("--model", default=os.environ.get("CONFUSION_MODEL", "gpt-4.1-mini")); p.add_argument("--stt-model", default="gpt-4o-mini-transcribe")
+    p.add_argument("--model", default=os.environ.get("CONFUSION_MODEL", "gpt-6-luna")); p.add_argument("--stt-model", default="gpt-4o-mini-transcribe")
     p.add_argument("--tts-model", default="gpt-4o-mini-tts"); p.add_argument("--voice", default="alloy"); p.add_argument("--output-dir", default="logs")
     args = p.parse_args()
     if args.demo: args.no_robot = True
