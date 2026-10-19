@@ -118,9 +118,10 @@ class Materials(unittest.TestCase):
         text = models.reasoning_messages("story", "A", "because", "hands on the table")
         self.assertNotIn("image_url", text[1]["content"])
         self.assertNotIn("Separate the last confirmed sighting", text[1]["content"])
-        self.assertIn("Do not say the person looks confused or seems certain.", models.VLM_INSTRUCTIONS)
+        self.assertIn("appears confused", models.VLM_INSTRUCTIONS)
+        self.assertIn("Do not write a sentence for Reachy to say aloud.", models.VLM_INSTRUCTIONS)
         self.assertNotIn("Describe the emotion", models.VLM_INSTRUCTIONS)
-        self.assertIn("Do not claim the person is confused or certain.", models.REASONING_INSTRUCTIONS)
+        self.assertIn("typed answer expresses uncertainty", models.REASONING_INSTRUCTIONS)
         previous = os.environ.get("OPENAI_API_KEY")
         os.environ["OPENAI_API_KEY"] = "sk-test-secret"
         try:
@@ -148,8 +149,8 @@ class Materials(unittest.TestCase):
         self.assertIn(checkpoint["question"], spoken)
         self.assertNotIn("\n", spoken)
         source = (ROOT / "robot_io.py").read_text(encoding="utf-8")
-        self.assertNotIn("imwrite", source)
         self.assertNotIn("last_frame", source)
+        self.assertIsNone(robot_io.save_frame({"not": "an image"}, Path("frames"), "skip"))
 
 
 class Guidance(unittest.TestCase):
@@ -242,6 +243,21 @@ class Guidance(unittest.TestCase):
         self.assertTrue(asked["deliver_hint"])
         self.assertFalse(asked["offer"])
         self.assertTrue(asked["camera_accessed"])
+
+        typed = run_study.plan_guidance("camera", "B", "i don't know", "story", capture, describe, decide)
+        self.assertEqual(typed["nudge"], "typed_confusion")
+        self.assertTrue(typed["offer"])
+
+        def looks_confused(frame, story, choice="", explanation=""):
+            del frame, story, choice, explanation
+            return CueResult("observed", "furrowed brow", "", 3, "yes")
+
+        visual = run_study.plan_guidance(
+            "camera", "A", "Nia had the key", "story", capture, looks_confused,
+            lambda *_args: ActionResult("no_nudge", "", 1),
+        )
+        self.assertEqual(visual["nudge"], "visual_confusion")
+        self.assertTrue(visual["offer"])
 
 
 class Session(unittest.TestCase):
@@ -421,13 +437,49 @@ class ReachyPlayback(unittest.TestCase):
 
         line = "Would a hint help?"
         with tempfile.TemporaryDirectory() as directory:
-            wav = Path(directory) / "line.wav"
-            delivered = robot_io.speak(Mini(), self._tts_client(sink), line, "gpt-4o-mini-tts", "alloy", wav)
+            cache = Path(directory)
+            screen = io.StringIO()
+            with redirect_stdout(screen):
+                delivered = robot_io.speak(Mini(), self._tts_client(sink), line, "gpt-4o-mini-tts", "alloy", cache)
+                delivered_again = robot_io.speak(Mini(), self._tts_client(sink), line, "gpt-4o-mini-tts", "alloy", cache)
         self.assertTrue(delivered)
-        self.assertEqual(played, [str(wav)])
+        self.assertTrue(delivered_again)
+        self.assertEqual(len(played), 2)
+        self.assertEqual(played[0], played[1])
         self.assertEqual(sink["request"]["input"], line)
         self.assertEqual(sink["request"]["model"], "gpt-4o-mini-tts")
         self.assertEqual(sink["request"]["voice"], "alloy")
+        self.assertLess(screen.getvalue().find("Reachy"), screen.getvalue().find("Would a hint help?"))
+
+    def test_camera_frame_is_saved_as_jpeg(self):
+        import numpy as np
+        image = np.zeros((8, 8, 3), dtype=np.uint8)
+        with tempfile.TemporaryDirectory() as directory:
+            saved = robot_io.save_frame(image, Path(directory), "P01_order1_B-C1")
+            self.assertEqual(saved, Path(directory) / "P01_order1_B-C1.jpg")
+            self.assertTrue(saved.is_file())
+            self.assertGreater(saved.stat().st_size, 0)
+
+    def test_streamed_wav_wait_uses_the_bytes_on_disk(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "streamed.wav"
+            payload = b"\x00\x00" * 24000
+            header = bytearray(44)
+            header[0:4] = b"RIFF"
+            header[4:8] = b"\xff\xff\xff\xff"
+            header[8:12] = b"WAVE"
+            header[12:16] = b"fmt "
+            header[16:20] = (16).to_bytes(4, "little")
+            header[20:22] = (1).to_bytes(2, "little")
+            header[22:24] = (1).to_bytes(2, "little")
+            header[24:28] = (24000).to_bytes(4, "little")
+            header[32:34] = (2).to_bytes(2, "little")
+            header[34:36] = (16).to_bytes(2, "little")
+            header[36:40] = b"data"
+            header[40:44] = b"\xff\xff\xff\xff"
+            path.write_bytes(bytes(header) + payload)
+            self.assertAlmostEqual(robot_io.wav_duration(path), 1.0, places=2)
 
     def test_playback_failure_is_not_success(self):
         import tempfile
@@ -440,9 +492,8 @@ class ReachyPlayback(unittest.TestCase):
                 raise RuntimeError("speaker unavailable")
 
         with tempfile.TemporaryDirectory() as directory:
-            wav = Path(directory) / "line.wav"
             delivered = robot_io.speak(
-                Mini(), self._tts_client({}), "Take your time—you're making progress.", "gpt-4o-mini-tts", "alloy", wav
+                Mini(), self._tts_client({}), "Take your time—you're making progress.", "gpt-4o-mini-tts", "alloy", Path(directory)
             )
         self.assertFalse(delivered)
 
@@ -454,6 +505,111 @@ class ReachyPlayback(unittest.TestCase):
         self.assertEqual(plan["vlm_error"], "NO_FRAME")
         self.assertFalse(plan["offer"])
         self.assertEqual(plan["nudge"], "fallback_neutral")
+
+    def test_cached_line_is_not_sent_to_tts_again(self):
+        sink = {"calls": 0}
+
+        class Response:
+            def __enter__(self):
+                sink["calls"] += 1
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def stream_to_file(self, path):
+                import wave
+                with wave.open(str(path), "wb") as handle:
+                    handle.setnchannels(1)
+                    handle.setsampwidth(2)
+                    handle.setframerate(8000)
+                    handle.writeframes(b"\x00\x00" * 8)
+
+        class Streaming:
+            def create(self, **kwargs):
+                del kwargs
+                return Response()
+
+        class Speech:
+            def __init__(self):
+                self.with_streaming_response = Streaming()
+
+        class Audio:
+            def __init__(self):
+                self.speech = Speech()
+
+        class Client:
+            def __init__(self):
+                self.audio = Audio()
+
+        with tempfile.TemporaryDirectory() as directory:
+            cache = robot_io.SpeechCache(Client(), "gpt-4o-mini-tts", "alloy", Path(directory))
+            cache.prepare(["Would a hint help?", "Would a hint help?"])
+            cache.prepare(["Would a hint help?"])
+        self.assertEqual(sink["calls"], 1)
+
+    def test_spoken_lines_cover_reachy_and_skip_typing_prompts(self):
+        materials = run_study.load_materials()
+        lines = run_study.spoken_lines(materials, 1, False)
+        self.assertIn(materials["prompts"]["welcome"], lines)
+        self.assertIn(materials["cases"][0]["turns"][1]["checkpoint"]["hint"], lines)
+        self.assertNotIn("Type the initial choice, A or B.", lines)
+
+
+class ComponentCheck(unittest.TestCase):
+    def _ok(self, frame=object()):
+        seen = {}
+
+        def connect():
+            seen["connected"] = True
+            return object()
+
+        def capture():
+            seen["captured"] = True
+            return frame
+
+        def describe(got):
+            seen["described"] = got
+            return CueResult("unclear", "", "", 12)
+
+        def decide():
+            seen["decided"] = True
+            return ActionResult("no_nudge", "", 8)
+
+        def speak(text):
+            seen["spoken"] = text
+            return True
+
+        return seen, dict(connect=connect, capture=capture, describe=describe, decide=decide, speak=speak)
+
+    def test_each_component_is_called_once(self):
+        frame = object()
+        seen, calls = self._ok(frame)
+        self.assertTrue(run_study.check_components(**calls))
+        self.assertEqual(seen["spoken"], "This is a Reachy component check.")
+        self.assertIs(seen["described"], frame)
+        self.assertTrue(seen["decided"])
+        self.assertTrue(seen["captured"])
+
+    def test_missing_frame_does_not_call_the_vision_model(self):
+        seen, calls = self._ok(None)
+
+        def describe(frame):
+            raise AssertionError(frame)
+
+        calls["describe"] = describe
+        self.assertFalse(run_study.check_components(**calls))
+        self.assertNotIn("described", seen)
+
+    def test_playback_failure_fails_the_check(self):
+        seen, calls = self._ok()
+
+        def speak(text):
+            seen["spoken"] = text
+            return False
+
+        calls["speak"] = speak
+        self.assertFalse(run_study.check_components(**calls))
 
 
 if __name__ == "__main__":

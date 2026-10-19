@@ -28,24 +28,26 @@ ACTIONS = ("offer_hint", "neutral_encouragement", "no_nudge")
 CUE_STATUSES = ("observed", "unclear")
 
 VLM_INSTRUCTIONS = (
-    "You describe one camera frame for a researcher. Report only observable, "
-    "non-identifying cues that might suggest a person needs more time or support, "
-    "such as gaze directed away from the workspace or a hand covering the mouth. "
-    "Do not name, identify, or describe a face in identifying detail. Do not claim "
-    "to know the person's emotion, confidence, or mental state. Do not say the "
-    "person looks confused or seems certain. Do not solve the mystery and do not "
-    "offer a hint. If the frame does not support a relevant observation, set "
-    "cue_status to unclear and keep the description empty."
+    "You see one camera frame taken just after a question. Judge whether the "
+    "person appears confused or uncertain. This judgment is an uncertain cue, "
+    "not a fact about how they feel. Do not name, identify, or describe a face "
+    "in identifying detail. Set appears_confused to yes, no, or unclear. When "
+    "it is yes or no, set cue_status to observed and describe one observable "
+    "sign, such as a furrowed brow, a gaze away from the workspace, or a settled "
+    "posture. When you cannot tell, set cue_status and appears_confused to "
+    "unclear and leave the description empty. Do not solve the mystery and do "
+    "not offer a hint. Do not write a sentence for Reachy to say aloud."
 )
 
 REASONING_INSTRUCTIONS = (
     "You choose Reachy's next dialogue action during a mystery question. "
     "You receive the story so far, the typed answer, and an uncertain visual cue. "
-    "The cue is not ground truth and is not a measure of emotion. "
-    "Choose offer_hint only when the typed answer or the cue gives a reason to "
-    "offer support. Choose neutral_encouragement when a brief non-evaluative "
-    "line is enough. Choose no_nudge when you should continue without comment. "
-    "Do not claim the person is confused or certain. Do not reveal the answer."
+    "The cue may say the person appears confused. Choose offer_hint when the "
+    "typed answer expresses uncertainty or confusion, or when the cue says the "
+    "person appears confused. Choose neutral_encouragement when a brief line is "
+    "enough. Choose no_nudge when the answer is specific and the cue does not "
+    "say the person appears confused. Do not reveal the answer. Do not write a "
+    "sentence that says the person looks confused."
 )
 
 
@@ -55,6 +57,7 @@ class CueResult:
     description: str
     error: str
     latency_ms: int
+    appears_confused: str = ""
 
 
 @dataclass
@@ -84,9 +87,10 @@ CUE_FORMAT = _schema(
     "visual_cue",
     {
         "cue_status": {"type": "string", "enum": list(CUE_STATUSES)},
+        "appears_confused": {"type": "string", "enum": ["yes", "no", "unclear"]},
         "description": {"type": "string"},
     },
-    ["cue_status", "description"],
+    ["cue_status", "appears_confused", "description"],
 )
 
 ACTION_FORMAT = _schema(
@@ -119,12 +123,11 @@ def chat_kwargs(model: str, effort: str, messages: list[dict], schema: dict, max
 
 
 def vlm_user_text(story_context: str, choice: str = "", explanation: str = "") -> str:
-    return (
-        "The participant just typed this answer. Describe only the current frame.\n\n"
-        f"Typed choice: {choice}\n"
-        f"Typed explanation: {explanation}\n\n"
-        f"{story_context}"
-    )
+    if choice or explanation:
+        preface = f"Typed choice: {choice}\nTyped explanation: {explanation}\n\n"
+    else:
+        preface = "The participant is about to type an answer. Judge only the current frame.\n\n"
+    return f"{preface}{story_context}"
 
 
 def vlm_messages(story_context: str, image_parts: list[dict], choice: str = "", explanation: str = "") -> list[dict]:
@@ -194,6 +197,16 @@ def _local_messages(messages: list[dict], instruction: str) -> list[dict]:
     return copied
 
 
+def _appears_confused(payload: dict, raw: str) -> str:
+    value = str(payload.get("appears_confused") or "").strip().lower()
+    if value in {"yes", "no", "unclear"}:
+        return value
+    text = raw.lower()
+    if "appears confused" in text or "looks confused" in text:
+        return "yes"
+    return ""
+
+
 def describe_frame(client, model: str, effort: str, frame, story_context: str, encode_image, choice: str = "", explanation: str = "", structured: bool = True) -> CueResult:
     started = time.perf_counter()
     try:
@@ -202,7 +215,7 @@ def describe_frame(client, model: str, effort: str, frame, story_context: str, e
         if not structured:
             messages = _local_messages(
                 messages,
-                'Reply with one JSON object and no other text: {"cue_status":"observed" or "unclear","description":"short observable cue or empty"}',
+                'Reply with one JSON object and no other text: {"cue_status":"observed" or "unclear","appears_confused":"yes" or "no" or "unclear","description":"short observable sign or empty"}',
             )
         response = client.chat.completions.create(
             **chat_kwargs(model, effort, messages, CUE_FORMAT, max_tokens=160, structured=structured)
@@ -211,13 +224,17 @@ def describe_frame(client, model: str, effort: str, frame, story_context: str, e
         payload = _json_object(raw) or {}
         status = payload.get("cue_status", "")
         description = (payload.get("description") or "").strip()
-        if status == "unclear":
-            return CueResult("unclear", "", "", _elapsed_ms(started))
+        confused = _appears_confused(payload, raw)
+        elapsed = _elapsed_ms(started)
+        if confused == "yes":
+            return CueResult("observed", description or "appears confused", "", elapsed, "yes")
+        if status == "unclear" or confused == "unclear":
+            return CueResult("unclear", "", "", elapsed, "unclear")
         if status == "observed" and description:
-            return CueResult("observed", description, "", _elapsed_ms(started))
+            return CueResult("observed", description, "", elapsed, confused or "no")
         if not structured and "unclear" in raw.lower():
-            return CueResult("unclear", "", "", _elapsed_ms(started))
-        return CueResult("error", "", "could not read the visual cue", _elapsed_ms(started))
+            return CueResult("unclear", "", "", elapsed, "unclear")
+        return CueResult("error", "", "could not read the visual cue", elapsed, "")
     except Exception as exc:
         return CueResult("error", "", redact(str(exc)), _elapsed_ms(started))
 

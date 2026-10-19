@@ -43,7 +43,13 @@ reachy_confusion/logs/
 
 # generated speech files and cached audio
 *.wav
+*.part
 new_reachy_test/assets/
+guidance_study/speech_cache/
+
+# participant camera frames
+guidance_study/frames/*
+!guidance_study/frames/.gitkeep
 
 # local caches
 .pytest_cache/

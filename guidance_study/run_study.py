@@ -20,6 +20,7 @@ import json
 import os
 import re
 import textwrap
+import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -36,11 +37,16 @@ from models import (
     OLLAMA_VLM_MODEL,
     ActionResult,
     CueResult,
+    redact,
 )
 
 ROOT = Path(__file__).resolve().parent
 MATERIALS_PATH = ROOT / "task_materials.json"
 HELP_PATTERN = re.compile(r"\b(help|hint|clue|stuck)\b", re.IGNORECASE)
+CONFUSION_PATTERN = re.compile(
+    r"\b(confused|confusing|unsure|uncertain|not sure|don'?t know|do not know|idk|no idea)\b",
+    re.IGNORECASE,
+)
 CHOICE_PATTERN = re.compile(r"^([ab])\b", re.IGNORECASE)
 YES_PATTERN = re.compile(r"^(y|yes|yeah|yep)\b", re.IGNORECASE)
 NO_PATTERN = re.compile(r"^(n|no|nope)\b", re.IGNORECASE)
@@ -73,8 +79,10 @@ FIELDNAMES = [
     "camera_accessed",
     "capture_status",
     "frame_saved",
+    "frame_path",
     "vlm_model",
     "vlm_cue_status",
+    "vlm_appears_confused",
     "vlm_description",
     "vlm_error",
     "vlm_latency_ms",
@@ -179,6 +187,36 @@ def story_context(case: dict, turn_id: str) -> str:
     return "\n".join(parts)
 
 
+def spoken_lines(materials: dict, order_id: int, api: bool) -> list[str]:
+    """Every Reachy line this order can speak. Participant prompts are not included."""
+    prompts = materials["prompts"]
+    lines = [
+        prompts["welcome"],
+        prompts["consent_api"] if api else prompts["consent"],
+        prompts["thanks"],
+        prompts["offer"],
+        prompts["neutral"],
+        prompts["revision"],
+        prompts["confusion"],
+        prompts["fixed_intro"],
+        prompts["camera_intro"],
+    ]
+    lines.extend(item["prompt"] for item in materials["perception_ratings"])
+    cases = {case["case_id"]: case for case in materials["cases"]}
+    order = next(item for item in materials["orders"] if item["order_id"] == order_id)
+    for assignment in order["cases"]:
+        case = cases[assignment["case_id"]]
+        lines.append(f"Case. {case['title']}.")
+        for turn in case["turns"]:
+            if turn["narration"]:
+                lines.append(turn["narration"])
+            checkpoint = turn["checkpoint"]
+            if checkpoint is not None:
+                lines.append(question_line(checkpoint))
+                lines.append(checkpoint["hint"])
+    return lines
+
+
 def question_line(checkpoint: dict) -> str:
     return (
         f"{checkpoint['question']} "
@@ -212,12 +250,50 @@ def change_type(initial: str, final: str, correct: str) -> str:
     return "other"
 
 
-def plan_guidance(condition: str, choice: str, explanation: str, story: str, capture, describe, decide) -> dict:
+def expressed_confusion(choice: str, explanation: str) -> bool:
+    return CONFUSION_PATTERN.search(f"{choice}\n{explanation}") is not None
+
+
+def start_camera_read(capture, describe, story: str, keep_frame=None) -> dict:
+    """Capture one frame and start the vision call before the participant types."""
+    box = {"frame": None, "cue": None, "error": "", "frame_path": "", "thread": None}
+
+    def run() -> None:
+        try:
+            frame = capture()
+            box["frame"] = frame
+            if keep_frame is not None and frame is not None:
+                saved = keep_frame(frame)
+                box["frame_path"] = "" if saved is None else str(saved)
+            if frame is not None:
+                box["cue"] = describe(frame, story, "", "")
+        except Exception as exc:
+            box["error"] = redact(str(exc))
+
+    thread = threading.Thread(target=run, daemon=True)
+    box["thread"] = thread
+    thread.start()
+    return box
+
+
+def _camera_result(capture, describe, story: str, choice: str, explanation: str, camera_read):
+    if camera_read is not None:
+        camera_read["thread"].join()
+        return camera_read.get("frame"), camera_read.get("cue")
+    frame = capture()
+    if frame is None:
+        return None, None
+    return frame, describe(frame, story, choice, explanation)
+
+
+def plan_guidance(condition: str, choice: str, explanation: str, story: str, capture, describe, decide, camera_read=None) -> dict:
     """Decide the guidance event. Fixed-point never calls capture."""
     plan = {
         "camera_accessed": False,
         "frame_saved": False,
+        "frame_path": "",
         "vlm_cue_status": "",
+        "vlm_appears_confused": "",
         "vlm_description": "",
         "vlm_error": "",
         "vlm_latency_ms": "",
@@ -242,13 +318,17 @@ def plan_guidance(condition: str, choice: str, explanation: str, story: str, cap
         return plan
 
     plan["camera_accessed"] = True
-    frame = capture()
-    cue = None
-    if frame is None:
+    frame, cue = _camera_result(capture, describe, story, choice, explanation, camera_read)
+    if camera_read is not None and camera_read.get("error") and cue is None:
+        plan["vlm_error"] = camera_read["error"]
+    elif frame is None and not plan["vlm_error"]:
         plan["vlm_error"] = "NO_FRAME"
-    else:
-        cue = describe(frame, story, choice, explanation)
+    if camera_read is not None and camera_read.get("frame_path"):
+        plan["frame_saved"] = True
+        plan["frame_path"] = camera_read["frame_path"]
+    if cue is not None:
         plan["vlm_cue_status"] = cue.status
+        plan["vlm_appears_confused"] = cue.appears_confused
         plan["vlm_description"] = cue.description
         plan["vlm_error"] = cue.error
         plan["vlm_latency_ms"] = cue.latency_ms
@@ -256,6 +336,14 @@ def plan_guidance(condition: str, choice: str, explanation: str, story: str, cap
         plan["explicit_help"] = True
         plan["deliver_hint"] = True
         plan["nudge"] = "explicit_help"
+        return plan
+    if expressed_confusion(choice, explanation):
+        plan["offer"] = True
+        plan["nudge"] = "typed_confusion"
+        return plan
+    if cue is not None and cue.appears_confused == "yes" and not cue.error:
+        plan["offer"] = True
+        plan["nudge"] = "visual_confusion"
         return plan
     if frame is None or cue is None or cue.error or cue.status != "observed":
         plan["nudge"] = "fallback_neutral"
@@ -292,7 +380,6 @@ class Log:
     def write(self, row: dict) -> None:
         full = {key: "" for key in FIELDNAMES}
         full.update(row)
-        full["frame_saved"] = False
         self._writer.writerow(full)
         self._file.flush()
         self.rows.append(full)
@@ -517,18 +604,26 @@ def _run_checkpoint(args, materials, case, condition, turn, input_fn, speaker, c
     if turn["narration"]:
         speaker.say(turn["narration"])
     speaker.say(question_line(checkpoint))
+    story = story_context(case, turn["turn_id"])
+    camera_read = None
+    if condition == "camera":
+        def keep_frame(frame):
+            if args.simulate:
+                return None
+            from robot_io import save_frame
+
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+            name = f"{args.participant}_order{args.order}_{checkpoint['checkpoint_id']}_{stamp}"
+            return save_frame(frame, ROOT / "frames", name)
+
+        camera_read = start_camera_read(capture, describe, story, keep_frame)
     answered_at = time.perf_counter()
     choice = read_choice(input_fn, "Type the initial choice, A or B.")
     explanation = read_text(input_fn, "Type the initial explanation.")
     response_ms = int((time.perf_counter() - answered_at) * 1000)
-    story = story_context(case, turn["turn_id"])
-    if condition == "fixed":
-        def _fixed_capture():
-            raise RuntimeError("fixed-point condition requested a camera frame")
-        capture_fn = _fixed_capture
-    else:
-        capture_fn = capture
-    plan = plan_guidance(condition, choice, explanation, story, capture_fn, describe, decide)
+    plan = plan_guidance(
+        condition, choice, explanation, story, capture, describe, decide, camera_read=camera_read
+    )
     hint_accepted = ""
     if plan["speak_neutral"]:
         speaker.say(prompts["neutral"])
@@ -576,9 +671,11 @@ def _run_checkpoint(args, materials, case, condition, turn, input_fn, speaker, c
         "confusion_rating": confusion,
         "camera_accessed": plan["camera_accessed"],
         "capture_status": capture_status(args.simulate, condition, plan),
-        "frame_saved": False,
+        "frame_saved": plan["frame_saved"],
+        "frame_path": plan["frame_path"],
         "vlm_model": "" if condition == "fixed" else args.vlm_model,
         "vlm_cue_status": plan["vlm_cue_status"],
+        "vlm_appears_confused": plan["vlm_appears_confused"],
         "vlm_description": plan["vlm_description"],
         "vlm_error": plan["vlm_error"],
         "vlm_latency_ms": plan["vlm_latency_ms"],
@@ -629,11 +726,75 @@ def _simulated_action(action: str):
     return decide
 
 
+def check_components(*, connect, capture, describe, decide, speak) -> bool:
+    """Exercise the robot, speaker, camera, vision model, and reasoning model once.
+
+    This does not start a participant session and does not save a camera frame.
+    A missing frame is a camera failure and is not sent to the vision model.
+    """
+    rows: list[tuple[str, bool, str]] = []
+
+    action = decide()
+    reasoning_ok = action.action in ("offer_hint", "neutral_encouragement", "no_nudge") and not action.error
+    rows.append((
+        "reasoning",
+        reasoning_ok,
+        f"{action.action}, {action.latency_ms} ms" if reasoning_ok else (action.error or "no action"),
+    ))
+
+    mini = None
+    try:
+        mini = connect()
+        rows.append(("robot", True, "connected"))
+    except Exception as exc:
+        rows.append(("robot", False, redact(str(exc))))
+        rows.append(("tts", False, "skipped because the robot did not connect"))
+        rows.append(("camera", False, "skipped because the robot did not connect"))
+        rows.append(("vision", False, "skipped because the robot did not connect"))
+        _print_component_rows(rows)
+        return False
+
+    try:
+        delivered = speak("This is a Reachy component check.")
+        rows.append(("tts", bool(delivered), "played on the Reachy speaker" if delivered else "playback failed"))
+        frame = capture()
+        if frame is None:
+            rows.append(("camera", False, "no frame"))
+            rows.append(("vision", False, "skipped because the camera returned no frame"))
+        else:
+            shape = getattr(frame, "shape", None)
+            rows.append(("camera", True, f"captured {tuple(shape)}" if shape is not None else "captured"))
+            cue = describe(frame)
+            vision_ok = cue.status in ("observed", "unclear") and not cue.error
+            rows.append((
+                "vision",
+                vision_ok,
+                f"{cue.status}, {cue.latency_ms} ms" if vision_ok else (cue.error or cue.status),
+            ))
+    finally:
+        closer = getattr(mini, "__exit__", None)
+        if closer:
+            closer(None, None, None)
+
+    _print_component_rows(rows)
+    return all(ok for _, ok, _ in rows)
+
+
+def _print_component_rows(rows: list[tuple[str, bool, str]]) -> None:
+    for name, ok, detail in rows:
+        print(f"{name:<10} {'ok' if ok else 'failed':<6} {detail}")
+    if all(ok for _, ok, _ in rows):
+        print("Component check passed.")
+    else:
+        print("Component check failed.")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run the guidance-strategy study.")
     parser.add_argument("--participant", default="P01")
     parser.add_argument("--order", type=int, choices=(1, 2, 3, 4))
     parser.add_argument("--check", action="store_true", help="Validate the task file and print the four orders.")
+    parser.add_argument("--components", action="store_true", help="Check the robot, speaker, camera, and models once. Does not run a session.")
     parser.add_argument("--api", action="store_true", help="Use OpenAI instead of the Lab 3 Ollama models.")
     parser.add_argument("--simulate", action="store_true", help="Print speech and skip the robot, camera, and models.")
     parser.add_argument("--simulate-cue", choices=("observed", "unclear", "error"), default="observed")
@@ -652,16 +813,20 @@ def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
     materials = load_materials()
     validate_materials(materials)
-    if args.order is None:
-        args.order = default_order(args.participant)
-    if args.order is None:
-        raise SystemExit("Pass --order 1, 2, 3, or 4.")
     if args.check:
         for order in materials["orders"]:
             pair = ", then ".join(f"{item['case_id']}/{item['condition']}" for item in order["cases"])
             print(f"Order {order['order_id']}: {pair}")
         print(materials["comparison_note"])
         return
+    if args.components:
+        if not _run_component_check(args):
+            raise SystemExit(1)
+        return
+    if args.order is None:
+        args.order = default_order(args.participant)
+    if args.order is None:
+        raise SystemExit("Pass --order 1, 2, 3, or 4.")
     if args.simulate:
         print("Simulation. No robot, camera, or model API will be used.")
         run_session(
@@ -673,12 +838,44 @@ def main(argv: list[str] | None = None) -> None:
         return
 
     print("Loading the session.")
+    tts_client, chat_client, structured, host = _open_models(args)
+    from robot_io import SpeechCache, connect_robot, get_frame, image_content
+    from models import choose_action, describe_frame
+    speech = SpeechCache(tts_client, args.tts_model, args.voice, ROOT / "speech_cache")
+    lines = spoken_lines(load_materials(), args.order, args.api)
+    speech.prepare(lines)
+    print(f"Connecting to Reachy at {host}.")
+    mini = connect_robot(host)
+    speech.upload(mini, lines)
+    try:
+        def speak_fn(text: str) -> bool:
+            return speech.speak(mini, text)
+
+        def capture():
+            return get_frame(mini)
+
+        def describe(frame, story: str, choice: str = "", explanation: str = "") -> CueResult:
+            return describe_frame(
+                chat_client, args.vlm_model, args.reasoning_effort, frame, story, image_content,
+                choice, explanation, structured=structured,
+            )
+
+        def decide(story: str, choice: str, explanation: str, cue: str) -> ActionResult:
+            return choose_action(
+                chat_client, args.model, args.reasoning_effort, story, choice, explanation, cue, structured=structured
+            )
+
+        run_session(args, speak_fn=speak_fn, capture=capture, describe=describe, decide=decide)
+    finally:
+        closer = getattr(mini, "__exit__", None)
+        if closer:
+            closer(None, None, None)
+
+
+def _open_models(args):
+    """Load the speech key and the chat client. Does not print the key."""
     from dotenv import load_dotenv
     from openai import OpenAI
-
-    from robot_io import connect_robot, get_frame, image_content, speak as robot_speak
-
-    from models import choose_action, describe_frame
 
     load_dotenv(ROOT / ".env")
     if not os.environ.get("OPENAI_API_KEY"):
@@ -700,32 +897,45 @@ def main(argv: list[str] | None = None) -> None:
         print(f"Ollama. Decisions: {args.model}. Camera cues: {args.vlm_model}.")
     print(f"Reachy speaker. TTS: {args.tts_model}. Voice: {args.voice}.")
     host = args.robot_ip or os.environ.get("REACHY_IP", "") or DEFAULT_ROBOT_IP
-    wav_path = ROOT / args.output_dir / "last_speech.wav"
-    print(f"Connecting to Reachy at {host}.")
-    mini = connect_robot(host)
-    try:
-        def speak_fn(text: str) -> bool:
-            return robot_speak(mini, tts_client, text, args.tts_model, args.voice, wav_path)
+    return tts_client, chat_client, structured, host
 
-        def capture():
-            return get_frame(mini)
 
-        def describe(frame, story: str, choice: str = "", explanation: str = "") -> CueResult:
-            return describe_frame(
-                chat_client, args.vlm_model, args.reasoning_effort, frame, story, image_content,
-                choice, explanation, structured=structured,
-            )
+def _run_component_check(args) -> bool:
+    from robot_io import SpeechCache, connect_robot, get_frame, image_content
 
-        def decide(story: str, choice: str, explanation: str, cue: str) -> ActionResult:
-            return choose_action(
-                chat_client, args.model, args.reasoning_effort, story, choice, explanation, cue, structured=structured
-            )
+    from models import choose_action, describe_frame
 
-        run_session(args, speak_fn=speak_fn, capture=capture, describe=describe, decide=decide)
-    finally:
-        closer = getattr(mini, "__exit__", None)
-        if closer:
-            closer(None, None, None)
+    print("Component check. One speech line, one camera frame, and one call to each model.")
+    tts_client, chat_client, structured, host = _open_models(args)
+    speech = SpeechCache(tts_client, args.tts_model, args.voice, ROOT / "speech_cache")
+    connected = {}
+
+    def connect():
+        print(f"Connecting to Reachy at {host}.")
+        connected["mini"] = connect_robot(host)
+        return connected["mini"]
+
+    def speak(text: str) -> bool:
+        return speech.speak(connected["mini"], text)
+
+    def capture():
+        return get_frame(connected["mini"])
+
+    def describe(frame):
+        return describe_frame(
+            chat_client, args.vlm_model, args.reasoning_effort, frame,
+            "Component check. No mystery to solve.", image_content, "A", "checking the camera",
+            structured=structured,
+        )
+
+    def decide():
+        return choose_action(
+            chat_client, args.model, args.reasoning_effort,
+            "Component check. No mystery to solve.", "A", "checking the model", "",
+            structured=structured,
+        )
+
+    return check_components(connect=connect, capture=capture, describe=describe, decide=decide, speak=speak)
 
 
 if __name__ == "__main__":

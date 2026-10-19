@@ -12,7 +12,7 @@ Turns 4 and 6 have no new narration. The previous turn is the story for that que
 
 ## What Reachy does
 
-Reachy welcomes the participant and explains the two mysteries. The participant confirms informed consent before either case. The default Ollama session processes one camera image per camera-informed checkpoint on this computer. Images are not saved. Pass `--api` only when the image will instead be sent to the model provider. If consent is declined, the session stops and no frame is requested.
+Reachy welcomes the participant and explains the two mysteries. The participant confirms informed consent before either case. The default Ollama session processes one camera image per camera-informed checkpoint on this computer. Each captured frame is saved in `guidance_study/frames/`. Pass `--api` only when the image will instead be sent to the model provider. If consent is declined, the session stops and no frame is requested.
 
 For a story turn, Reachy speaks the narration and does not use the camera.
 
@@ -20,13 +20,13 @@ At a checkpoint, Reachy speaks any narration for that turn, then the question an
 
 Fixed-point checkpoints do not request a camera frame. Reachy asks "Would a hint help?" every time, unless the typed response already asks for help. A yes speaks that checkpoint's hint. A no continues. An explicit request for help speaks the same hint and does not ask the offer question again. A request is explicit when the initial choice or explanation contains the word help, hint, clue, or stuck.
 
-Camera-informed checkpoints request one frame after the initial typed response. The vision-language call may describe only observable, non-identifying cues, and it may return unclear. It must not claim an emotion, a level of confidence, or any other internal state. If the cue status is observed, the reasoning model reads that description, the typed response, and the story so far, and it must choose `offer_hint`, `neutral_encouragement`, or `no_nudge`.
+Camera-informed checkpoints request one frame as soon as the question has been spoken, then the participant types the initial choice and explanation. During that typing, the vision call judges whether the person appears confused. The judgment is an uncertain cue. Reachy does not say it aloud and does not identify the person. A typed expression of confusion, such as "I don't know," or a cue that the person appears confused, asks "Would a hint help?" If the frame is missing, the cue is unclear, and the typed answer does not express confusion, Reachy uses the neutral line and does not offer a camera-based hint. Otherwise the reasoning model reads the cue, the typed response, and the story so far, and it must choose `offer_hint`, `neutral_encouragement`, or `no_nudge`.
 
 - `offer_hint`: Reachy asks "Would a hint help?" and speaks the fixed hint only if the person accepts.
 - `neutral_encouragement`: Reachy says "Take your time—you're making progress."
 - `no_nudge`: Reachy adds no guidance line.
 
-If the frame is missing, the cue is unclear, or either model call fails, Reachy does not offer a camera-triggered hint. The failure is logged and Reachy uses the same neutral line, then continues. An explicit help request still delivers the checkpoint hint in this condition. The frame is still requested so the procedure matches the condition, but a failed image does not block a help request the person already typed.
+If the frame is missing, the cue is unclear, or either model call fails, Reachy does not offer a camera-triggered hint. The failure is logged and Reachy uses the same neutral line, then continues. An explicit help request still delivers the checkpoint hint. A typed expression of confusion still asks whether a hint would help. The frame is still requested so the procedure matches the condition, but a failed image does not block a help request the person already typed.
 
 Neither condition says "You look confused" or "You seem certain." Model output is an uncertain cue, not ground truth about the participant.
 
@@ -50,7 +50,7 @@ The participant types yes. Reachy speaks the fixed hint, then asks whether to ke
 
 ### Camera-informed, hint offered
 
-The participant types `B` and an explanation. Reachy captures one frame. Suppose the cue is an observed, non-identifying description and the reasoning model returns `offer_hint`. Reachy asks "Would a hint help?" and speaks the same fixed hint only after a yes. Reachy does not say what it thinks the person feels.
+Reachy asks the question and captures one frame while the participant types `B` and an explanation. Suppose the cue says the person appears confused, or the explanation says "I don't know." Reachy asks "Would a hint help?" and speaks the same fixed hint only after a yes. Reachy does not say what it thinks the person feels.
 
 ### Camera-informed, unclear or failed
 
@@ -68,7 +68,7 @@ The program applies that checkpoint's evidence checks to the final explanation a
 
 `case_completion_ms` runs from the start of the case introduction through submission of the turn-6 final explanation. It excludes that checkpoint's confusion rating and the three perception ratings. `response_latency_ms` runs from the end of the question speech through submission of the initial explanation.
 
-Logged fields cover participant ID, order, case, condition, checkpoint, initial and final choice and explanation, correctness, explanation score, confusion rating, perception ratings, VLM cue, error, and latency, reasoning action, error, and latency, nudge, hint offered, accepted, and delivered, explicit help, response and case timing, and whether each spoken line in that step succeeded. Raw frames are not logged. `frame_saved` is false.
+Logged fields cover participant ID, order, case, condition, checkpoint, initial and final choice and explanation, correctness, explanation score, confusion rating, perception ratings, VLM cue, error, and latency, reasoning action, error, and latency, nudge, hint offered, accepted, and delivered, explicit help, response and case timing, and whether each spoken line in that step succeeded. The CSV records whether the frame was saved and its file name. The image itself stays in `guidance_study/frames/`.
 
 ## Canonical task text
 
@@ -156,9 +156,9 @@ Score 1 only if the final explanation distinguishes Nia's recorded key access fr
 
 I am Reachy. We will look at two short fictional mysteries. I will tell you what was found, then ask you to choose A or B and explain why. Type every answer in the terminal. You may ask for a hint.
 
-In the camera-informed case I capture one image at each question and process it with a model on this computer. I do not save the image. My spoken lines are generated by the configured speech service and played on my speaker. A description of the image is an uncertain cue, not a fact about how you feel. Type yes to confirm informed consent, or no to stop.
+In the camera-informed case I capture one image at each question, process it with a model on this computer, and save that image in the study folder. My spoken lines are generated by the configured speech service and played on my speaker. A description of the image is an uncertain cue, not a fact about how you feel. Type yes to confirm informed consent, or no to stop.
 
-In the camera-informed case I capture one image at each question and send that image to the model provider. I do not save the image on this computer. A description of the image is an uncertain cue, not a fact about how you feel. Type yes to confirm informed consent, or no to stop.
+In the camera-informed case I capture one image at each question, send that image to the model provider, and save a copy in the study folder on this computer. A description of the image is an uncertain cue, not a fact about how you feel. Type yes to confirm informed consent, or no to stop.
 
 I will offer a hint at each question.
 
