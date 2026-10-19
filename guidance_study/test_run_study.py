@@ -96,6 +96,7 @@ class Materials(unittest.TestCase):
                     found[checkpoint["checkpoint_id"]] = checkpoint["correct_option"]
                     self.assertIn(turn["turn_id"], {"A-T2", "A-T4", "A-T6", "B-T2", "B-T4", "B-T6"})
         self.assertEqual(found, expected)
+        self.assertEqual(run_study.next_participant(Path("missing-logs")), "P01")
         self.assertEqual(run_study.default_order("P01"), 1)
         self.assertEqual(run_study.default_order("P04"), 4)
         self.assertEqual(run_study.default_order("P05"), 1)
@@ -154,6 +155,20 @@ class Materials(unittest.TestCase):
 
 
 class Guidance(unittest.TestCase):
+    def test_next_participant_follows_hardware_logs_only(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            for name, mode in (
+                ("P01_order1_sim.csv", "simulate"),
+                ("P01_order1_real.csv", "hardware"),
+                ("P03_order3_real.csv", "hardware"),
+            ):
+                with (folder / name).open("w", encoding="utf-8", newline="") as handle:
+                    writer = csv.DictWriter(handle, fieldnames=["session_mode"])
+                    writer.writeheader()
+                    writer.writerow({"session_mode": mode})
+            self.assertEqual(run_study.next_participant(folder), "P04")
+
     def test_explicit_help_and_scoring(self):
         self.assertTrue(run_study.explicit_help_requested("I need a hint"))
         self.assertFalse(run_study.explicit_help_requested("Ada returned the key"))

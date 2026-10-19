@@ -27,7 +27,7 @@ Both conditions then ask whether to keep or change the answer, collect the final
 
 The program scores the letter choice against the answer key. The explanation score is secondary: 1 when the final explanation contains that checkpoint's evidence check, otherwise 0. The scoring rule is not shown during the session. Case time runs from the case introduction through the turn-6 final explanation.
 
-Orders cross case and condition. `P01` is order 1. The four orders are in `counterbalancing.md`. Full wording and the pilot checklist are in `protocol.md`.
+Orders cross case and condition. The first hardware session is `P01`, order 1. The next session is `P02`, order 2, and the order rotates through the four assignments in `counterbalancing.md`. Full wording and the pilot checklist are in `protocol.md`.
 
 ## Files
 
@@ -84,7 +84,7 @@ python run_study.py --check
 Walk through a session on screen only. The log is marked simulated.
 
 ```bash
-python run_study.py --participant P01 --order 1 --simulate
+python run_study.py --simulate
 ```
 
 `--simulate-cue unclear` and `--simulate-action offer_hint` try the other camera branches. Type `q` to stop.
@@ -95,13 +95,13 @@ Check the live robot, speaker, camera, and both models once. Reachy says "This i
 python run_study.py --components
 ```
 
-Run a session. The first run prepares the spoken lines and stores them in `speech_cache/`. Later runs reuse them. Type answers in the terminal. `P01` hears Ashcombe Star with fixed-point hints, then Briarwick Watch with the camera.
+Run a session. The participant ID and order are chosen from the hardware logs, and the terminal prints them before the welcome. The first run prepares the spoken lines and stores them in `speech_cache/`. Later runs reuse them. Type answers in the terminal.
 
 ```bash
-python run_study.py --participant P01 --order 1
+python run_study.py
 ```
 
-Confirm the Reachy daemon first: `curl http://192.168.8.199:8000/api/daemon/status`. Use `--order 2`, `3`, or `4` for the other assignments, and a new participant ID for each person. Use `--robot-ip` when the robot is not at `192.168.8.199`.
+Confirm the Reachy daemon first: `curl http://192.168.8.199:8000/api/daemon/status`. Pass `--participant P04` only when repeating a specific person. Use `--robot-ip` when the robot is not at `192.168.8.199`.
 
 `No Reachy Mini Audio USB device found` means this computer does not have the robot's USB microphone. Speech is sent over the network. A line was not played only if the terminal prints `Speech failed`.
 
@@ -111,7 +111,7 @@ If Python reports `No module named 'gi'`, the GStreamer path files are hidden. T
 chflags nohidden \
   "../.venv/lib/python3.11/site-packages/gstreamer_bundle.pth" \
   "../.venv/lib/python3.11/site-packages/gstreamer_ext_runtime.pth" && \
-python run_study.py --participant P01 --order 1
+python run_study.py
 ```
 
 Use the same prefix for `--components`. Logs go to `guidance_study/logs/` and are gitignored because they contain answers. Use the pilot checklist in `protocol.md` before treating a session as data.

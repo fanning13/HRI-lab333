@@ -8,8 +8,8 @@ no_nudge. An explicit typed request for help delivers that checkpoint's
 hint in either condition.
 
     python run_study.py --check
-    python run_study.py --participant P01 --order 1 --simulate
-    python run_study.py --participant P01 --order 1
+    python run_study.py --simulate
+    python run_study.py
 """
 
 from __future__ import annotations
@@ -155,6 +155,25 @@ def validate_materials(materials: dict) -> None:
     fourth = materials["orders"][3]["cases"]
     if [ (item["case_id"], item["condition"]) for item in fourth ] != [("B", "fixed"), ("A", "camera")]:
         raise ValueError("order 4 must be Briarwick fixed-point, then Ashcombe camera-informed")
+
+
+def next_participant(log_dir: Path) -> str:
+    """Next ID after the highest hardware session already stored in logs."""
+    highest = 0
+    if log_dir.is_dir():
+        for path in log_dir.glob("*.csv"):
+            match = re.match(r"P(\d+)_order\d+_", path.name, re.IGNORECASE)
+            if not match:
+                continue
+            try:
+                with path.open(newline="", encoding="utf-8") as handle:
+                    rows = csv.DictReader(handle)
+                    hardware = any(row.get("session_mode") == "hardware" for row in rows)
+            except OSError:
+                continue
+            if hardware:
+                highest = max(highest, int(match.group(1)))
+    return f"P{highest + 1:02d}"
 
 
 def default_order(participant: str) -> int | None:
@@ -791,7 +810,7 @@ def _print_component_rows(rows: list[tuple[str, bool, str]]) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run the guidance-strategy study.")
-    parser.add_argument("--participant", default="P01")
+    parser.add_argument("--participant", default="", help="Defaults to the next ID after the hardware logs.")
     parser.add_argument("--order", type=int, choices=(1, 2, 3, 4))
     parser.add_argument("--check", action="store_true", help="Validate the task file and print the four orders.")
     parser.add_argument("--components", action="store_true", help="Check the robot, speaker, camera, and models once. Does not run a session.")
@@ -823,10 +842,16 @@ def main(argv: list[str] | None = None) -> None:
         if not _run_component_check(args):
             raise SystemExit(1)
         return
+    if not args.participant:
+        log_dir = Path(args.output_dir)
+        if not log_dir.is_absolute():
+            log_dir = ROOT / log_dir
+        args.participant = next_participant(log_dir)
     if args.order is None:
         args.order = default_order(args.participant)
     if args.order is None:
         raise SystemExit("Pass --order 1, 2, 3, or 4.")
+    print(f"Participant {args.participant}. Order {args.order}.")
     if args.simulate:
         print("Simulation. No robot, camera, or model API will be used.")
         run_session(

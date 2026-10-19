@@ -9,4 +9,4 @@ The design brief's fourth assignment repeated fixed-point for the Ashcombe Star.
 3. Ashcombe Star / camera-informed, then Briarwick Watch / fixed-point.
 4. Briarwick Watch / fixed-point, then Ashcombe Star / camera-informed.
 
-`P01` uses order 1, `P02` order 2, `P03` order 3, `P04` order 4, and then the rotation repeats. Pass `--order` when the participant ID is not in that `P01` form. Do not reassign an order after a session has started. If the sample does not divide evenly by four, leave the last orders short rather than repeating a person.
+`P01` uses order 1, `P02` order 2, `P03` order 3, `P04` order 4, and then the rotation repeats. A session started without `--participant` takes the next number after the highest hardware log. Practice runs with `--simulate` do not advance that number. Do not reassign an order after a session has started. If the sample does not divide evenly by four, leave the last orders short rather than repeating a person.
