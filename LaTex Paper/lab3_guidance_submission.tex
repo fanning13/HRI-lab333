@@ -1,0 +1,186 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{graphicx,booktabs,amsmath,tabularx,array}
+\usepackage[hidelinks]{hyperref}
+\usepackage{url}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\title{Evaluating Camera-Informed Adaptive Guidance in Human--Robot Mystery-Solving\\[0.35em]\large INFO 5356: Introduction to Human--Robot Interaction --- Lab 3}
+\author{\IEEEauthorblockN{Fanning Yifan Luo, Aurora Jiaxin Shen, Elliot Zhang, Jaclyn Pham}\IEEEauthorblockA{Cornell Tech\\NetIDs: yl4389, js3996, qz432, cqp4}}
+\begin{document}
+\maketitle
+\begin{abstract}
+Determining when to offer assistance without interrupting a user's reasoning is an important human--robot interaction (HRI) problem. We developed a semi-autonomous Reachy Mini mystery-solving system contrasting fixed-point hint offers with camera-informed guidance informed by one vision-language-model (VLM) camera-frame interpretation, typed evidence, and a constrained dialogue-action policy. The task has two standardized fictional mysteries, three checkpoints per mystery, and four counterbalanced orders. The project was rebuilt late in the term after a microphone failure made our original spoken-storytelling design unusable, and we report a descriptive analysis of eight participants' session logs from the redesigned study. Across 48 logged checkpoint records, camera-informed guidance has higher recorded final-answer accuracy (95.8\% versus 75.0\%) and higher post-case helpfulness (4.00 versus 2.38 on a five-point scale), while the second case tends to receive lower ratings under both strategies. We discuss the limits of single-frame cues, ordering effects, and the noisy lab environment in which the sessions were run.
+\end{abstract}
+
+\section{Introduction}
+\subsection{HRI Problem, Motivation, and Application}
+Social robots in educational and leisure settings must decide \emph{when} assistance is useful. An unsolicited hint can distract a person who is reasoning independently, whereas delayed help may leave a participant stuck. This timing problem applies to museums, learning companions, and other collaborative tasks in which robots should support rather than solve problems for people. Vision-language models (VLMs) make it feasible to incorporate immediate scene observations, but facial and posture cues cannot be equated with a person's actual cognitive state. The engineering question concerns the whole robot interaction, not VLM classification in isolation.
+
+We designed an interactive mystery-solving task with Reachy Mini. The participant listens to two short fictional cases, types a choice and explanation at each of three checkpoints, and may accept a hint or revise an answer. One system version always offers a hint; the other uses a camera snapshot and typed-response evidence to inform whether Reachy offers one. Identical story materials, answer keys, and hint text make the comparison interpretable as one between \emph{complete guidance strategies}. The camera-informed strategy changes both sensory input and hint triggering; therefore it cannot isolate the causal effect of vision alone.
+
+\subsection{Research Questions}
+\noindent\textbf{RQ1 (perception):} Compared with fixed-point assistance, how does camera-informed guidance change participants' ratings of helpfulness, guidance timing, and the match between help and when they wanted it?
+
+\noindent\textbf{RQ2 (task outcome):} How do the strategies differ in objective final multiple-choice accuracy and initial-to-final answer improvement? We also examine hint frequency, input-response duration, and condition order as descriptive system-level context.
+
+\noindent\textbf{Video demonstration.} Video of Reachy Mini in the HRI scenario (four clips) is available on Google Drive: \url{https://drive.google.com/drive/folders/1KQmbK1nYUo2-PXA0Jl994M648heiw137}. Not all participants consented to video and image sharing, so the clips and any frames shown include only participants who agreed.
+
+\section{Background}
+\subsection{Cues of Confusion and Support Needs}
+Li and Ross studied multimodal signals associated with self-reported confusion in situated, task-oriented interactions with social robots \cite{li2023hmm,li2023invoking}. Their results motivate attending to head pose, gaze, affect estimates, and task context, but associations cannot justify treating a single camera image as ground truth about cognition. Our study narrows this question to whether an \emph{uncertain} visual cue, mediated through a conservative guidance controller, can improve the timing and reception of robot help during a structured reasoning activity.
+
+\subsection{Generative AI and Social-Robot Dialogue}
+Kim, Lee, and Mutlu examined design considerations for LLM-powered HRI \cite{kim2024understanding}; Abbo and Belpaeme demonstrated vision-enabled social-robot dialogue \cite{abbo2025blind}. Zabala \emph{et al.} explored multimodal collaborative storytelling with Pepper and reported limitations related to turn-based interaction and inference delay \cite{zabala2025storytelling}. These studies establish a basis for embodied language and visual context. The gap motivating our evaluation is a controlled, end-to-end comparison of always-offered versus selectively offered \emph{identical} hints during two reasoning stories. We complement perceptions with pre/post answer correctness and interaction logs, instead of assessing only fluent generated dialogue or classifier outputs.
+
+\section{Robot Control Architecture}
+\subsection{System Goals and Inputs/Outputs}
+The system goal is to deliver optional guidance reliably while allowing the participant to retain control of answer choices. Inputs are: predefined story turn and checkpoint; an A/B typed answer; typed explanation and explicit request for help; checkpoint-specific evidence and hints; and, in the camera-informed condition, one camera frame captured immediately after Reachy's question. Participant speech is \emph{not} recognized or recorded as the input channel. Outputs are spoken story prompts and dialogue actions through Reachy's speaker, terminal echoes of these prompts, optional prerecorded hints, answer-revision requests, ratings prompts, and structured CSV logs. The fixed-point condition does not request or process camera images, although the robot's media backend may remain connected.
+
+\noindent\textbf{System-focused problem and assessment.} The VLM-centered problem we study is whether a robot that interprets one camera frame, together with typed evidence, can decide \emph{when} to offer a hint better than a robot that always offers one. This follows from the gaps in Section 2: Li and Ross show that observable cues are only weakly diagnostic of confusion \cite{li2023hmm,li2023invoking}, Abbo and Belpaeme show that vision can be added to robot dialogue \cite{abbo2025blind}, and Zabala \emph{et al.} report that generative latency disrupts turn-taking \cite{zabala2025storytelling}. We therefore assess the whole robot behavior with objective measures (final-answer accuracy, initial-to-final improvement, number of hints offered and delivered, and case completion time) rather than the quality of VLM outputs.
+
+\subsection{Modules and Data Flow}
+\textbf{(1) Story/checkpoint controller:} reads \texttt{task\_materials.json} and serves six story turns per case; turns 2, 4, and 6 are checkpoints. \textbf{(2) Terminal input and scoring:} collects initial and final A/B responses and explanations; checks letters against fixed keys and uses deterministic evidence checks for the optional explanation score. \textbf{(3) Frame acquisition and VLM:} in the camera condition, captures and saves one frame per checkpoint and queries the \texttt{gemma3:4b} VLM (default local Ollama mode) about uncertain, observable signs. \textbf{(4) Reasoning/action policy:} the \texttt{llama3.2} local LLM considers story context, the typed response, and the visual cue, constrained to \texttt{offer\_hint}, \texttt{neutral\_encouragement}, or \texttt{no\_nudge}. Explicit typed requests trigger the standardized hint; typed uncertainty can prompt an offer. Unclear frames or failed models use a neutral fallback unless typed evidence independently requests help. \textbf{(5) Speech/behavior:} synthesizes and caches spoken lines using \texttt{gpt-4o-mini-tts} and plays them via Reachy Mini; the terminal prints the same messages. \textbf{(6) Logger:} writes condition, case, answers, scores, cue/action details, hint events, execution outcomes, and timing fields to CSV. The robot does not generate arbitrary movements based on the VLM's output.
+
+\begin{figure}[t]
+\centering\footnotesize
+\fbox{\parbox{.89\columnwidth}{\centering\textbf{Story controller + question}\\Six turns/case; checkpoints 2, 4, 6}}\\[3pt]
+$\downarrow$\\[2pt]
+\fbox{\parbox{.89\columnwidth}{\centering\textbf{Typed choice and explanation}\\Camera condition: one image acquired after question}}\\[3pt]
+$\downarrow$\\[2pt]
+\begin{tabular}{@{}cc@{}}
+\fbox{\parbox{.40\columnwidth}{\centering\textbf{Fixed-point}\\Offer hint at every checkpoint}} &
+\fbox{\parbox{.40\columnwidth}{\centering\textbf{Camera-informed}\\VLM cue + typed evidence\\LLM selects constrained action}}
+\end{tabular}\\[3pt]
+$\searrow\quad\swarrow$\\[2pt]
+\fbox{\parbox{.89\columnwidth}{\centering\textbf{Reachy TTS + optional standard hint}\\Accept/decline; retain or revise answer}}\\[3pt]
+$\downarrow$\\[2pt]
+\fbox{\parbox{.89\columnwidth}{\centering\textbf{CSV interaction logging}\\Correctness, perceived confusion, ratings, timings, execution flags}}
+\caption{Hybrid, checkpoint-triggered robot control architecture. Only the camera-informed branch requests a frame and uses VLM/LLM inference.}
+\label{fig:architecture}
+\end{figure}
+
+\subsection{Control Type and End-to-End Assessment}
+The architecture is hybrid deliberative-reactive and semi-autonomous: a deterministic task controller constrains task progression, while generative inference advises the next permitted dialogue action. Reactions occur at checkpoints rather than via continuous camera surveillance. Participants actively decide whether to accept hints and whether to revise answers. To assess the end-to-end system, the protocol logs objective answer accuracy, correction rates, hints actually delivered, completion time, and speech execution outcomes, alongside subjective ratings. The speech-execution fields do not provide a reliable measure of audible delivery.
+
+\section{Evaluation}
+\subsection{Sampling, Conditions, and Counterbalancing}
+Eight adult volunteers, all Cornell Tech graduate students who can read and respond to short English-language mystery scenarios, took part in sessions held on October 19, 2026. They were recruited by convenience sampling. Participants were identified with pseudonymous IDs (P01--P08), assigned to the four counterbalancing sequences in order (P01--P04 to sequences 1--4, then P05--P08 in the same order), so each sequence has two participants. In the camera-informed condition one camera frame is captured per checkpoint and processed by a locally run vision-language model. Participation was voluntary; consent to the retention and sharing of video and images was separate, and not every participant gave it. The design compares two within-person conditions: \textbf{fixed-point}, which asks ``Would a hint help?'' at every checkpoint without frame acquisition, and \textbf{camera-informed}, which may offer that same hint, encourage the user, or continue without a nudge after model inference. Explicit help is available in both. The within-subjects design was chosen because the sample is small and between-person differences in reasoning ability would otherwise be large relative to the effect of guidance; counterbalancing both condition order and case assignment limits order and story confounds. The paired comparison speaks directly to the research questions: RQ1 is answered by paired post-case ratings and RQ2 by paired final-answer accuracy and improvement.
+
+\subsection{Development History and Study Conditions}
+Our original design was a spoken collaborative-storytelling interaction in which participants talked to Reachy. We spent roughly three to four days debugging microphone capture on the robot without obtaining usable recordings. The Reachy Mini daemon logs from this period show repeated application restarts (the conversation app's background tool manager started again within minutes) and WebSocket errors, for example ``WebSocket is not connected,'' followed by client disconnections. Because speech input could not be made reliable, on the final day we replaced the design with the present typed-input mystery task: we wrote the task materials and controller, implemented both guidance conditions, and recruited and ran participants within that day. This is why participant speech is not an input channel and why the study had no pilot phase.
+
+The sessions were run in a shared laboratory where other teams were testing audio-enabled models at the same time. The resulting background noise was a distraction for a task that requires quiet reasoning, so the environment was not ideal. Some sessions had to be attempted more than once and were handled before analysis. We treat this as a limitation on the ratings and accuracy values reported below.
+
+The two cases are \emph{The Ashcombe Star} (museum brooch) and \emph{The Briarwick Watch} (hotel pocket watch). Four sequences counterbalance condition, case, and order: (1) Ashcombe/fixed then Briarwick/camera; (2) Briarwick/camera then Ashcombe/fixed; (3) Ashcombe/camera then Briarwick/fixed; (4) Briarwick/fixed then Ashcombe/camera. Each participant contributes two case-level trials and six checkpoints; the dataset therefore contains 16 case trials, 48 checkpoint records (24 per condition), and 48 post-case rating records (three items per case). Checkpoints within one ID are not treated as independent participants.
+
+\subsection{Study Task, Workflow, and Autonomy}
+Reachy explains the interaction and asks for informed consent. A participant follows a detective investigating a missing object, hears standardized narrative segments, and answers an A/B evidence question at each checkpoint with a typed explanation. The task probes last-confirmed location, logged key access, and whether access constitutes proof of theft. The robot either offers an optional standard hint (yes/no), delivers encouragement, or gives no additional guidance. The participant then keeps or changes the answer, supplies a final explanation, and retrospectively rates confusion immediately before the robot responded (1--5). After each mystery the participant rates helpfulness, timing, and match to desired help (all 1--5). Reachy operates semi-autonomously; the human types input and authorizes hints. A facilitator is needed for equipment setup and consent, but is not meant to choose dialogue actions.
+
+\begin{figure}[t]
+\centering\footnotesize
+\fbox{\parbox{.86\columnwidth}{\centering\textbf{Instructions and informed consent}}}\\[3pt]$\downarrow$\\[1pt]
+\fbox{\parbox{.86\columnwidth}{\centering\textbf{Case 1: six turns, three checkpoints}\\Typed answer $\rightarrow$ guidance $\rightarrow$ revision $\rightarrow$ confusion rating}}\\[3pt]$\downarrow$\\[1pt]
+\fbox{\parbox{.86\columnwidth}{\centering\textbf{Three-item condition questionnaire}}}\\[3pt]$\downarrow$\\[1pt]
+\fbox{\parbox{.86\columnwidth}{\centering\textbf{Case 2: other strategy and story}\\Same procedure and second questionnaire}}
+\caption{Within-participant evaluation workflow. Four assignments reverse both condition order and case pairing.}
+\label{fig:workflow}
+\end{figure}
+
+\subsection{Logged Data and Objective Metrics}
+The CSV schema has session, story, checkpoint, and post-case perception rows. Data are collected at inference time only; no model is trained or fine-tuned. The runner records typed inputs, initial/final correctness, deterministic explanation score, confusion rating, hint offer/acceptance/delivery, model cue and action, and robot-execution fields. At each camera-informed checkpoint the program saves one JPEG frame under \texttt{guidance\_study/frames/}, named by participant, order, checkpoint, and UTC timestamp (e.g., \texttt{P01\_order1\_B-C1\_<timestamp>.jpg}). The frames are stored separately from the CSV and are matched to rows by this name, because the frame-path column is not populated in the exported logs. Frames are retained only for participants who consented (the retained set comes from P01--P04) and are not part of the public repository or this submission. No model training is conducted. The exported CSVs have 168 total rows, of which 48 are checkpoints, 48 are individual post-case questionnaire entries, 48 are story rows, 16 are case starts, and eight mark session ends. The exported CSVs do not have populated VLM or reasoning latencies or speech-delivery success flags, so we do not report model latency, robot-delivery rates, or VLM sensitivity.
+
+For condition $c$, objective final accuracy is $A_c=\sum_j \mathbf1[\mathrm{final}_j=\mathrm{key}_j]/N_c$ with $N_c=24$ checkpoints. Initial accuracy uses initial answers instead; mean improvement is $\Delta_c=A_{c,\mathrm{final}}-A_{c,\mathrm{initial}}$, equivalent to the checkpoint average of final minus initial binary correctness. We also count incorrect-to-correct and correct-to-incorrect revisions. Explanation scores use predetermined lexical evidence checks and are not independent human judgments. A robot-execution success rate (successful output events divided by issued output events) is defined in our protocol but is not reported because the speech-delivery flags were not populated in the exported logs.
+
+\noindent\textbf{Timing definition.} In the actual protocol, \texttt{response\_latency\_ms} measures the end of Reachy's spoken question through submission of the \emph{initial explanation}; it is participant input-response time, \emph{not} time for the robot or VLM to respond. \texttt{case\_completion\_ms} runs from case introduction through the final explanation at checkpoint three, excluding the final confusion and perception ratings. Model inference latency is a separate quantity and should be analyzed separately in future runs.
+
+\noindent\textbf{Objective measures and justification.} Final-answer accuracy is a task-success rate, one of the standard task-oriented HRI performance metrics \cite{steinfeld2006common}; initial-to-final improvement isolates what the interaction added beyond the participant's own first answer; hint offers and deliveries measure how intrusive the guidance policy was; and case completion time captures efficiency. All are computed from logged answers and events, not from participants' opinions. The three post-case ratings are subjective and are used only for RQ1.
+
+\subsection{Analysis}
+For each logged ID and condition, we calculate three-checkpoint accuracy and correction rate; ratings are one score per ID, condition, and item. Reported standard deviations are sample SDs among the eight logged IDs rather than SDs of 24 pseudoreplicated checkpoints. Counts and proportions are shown where appropriate; the paired camera-minus-fixed rating differences are exploratory. We also divide sessions by first versus second case to inspect the possibility of fatigue, while recognizing that case content, condition, and period remain intertwined at small sample size. No hypothesis tests or causal conclusions are justified for a sample of this size.
+
+
+\section{Results: Descriptive Analysis of Session Logs}
+\textbf{Data collection conditions.} Results come from the eight sessions described in Section 4.2, run in a noisy shared laboratory after a last-day redesign. Values are descriptive and should be read with that context.
+\begin{table}[t]
+\caption{Descriptive paired outcomes (8 logged IDs; mean $\pm$ sample SD across IDs). Ratings 1--5; accuracy expressed as percent of three checkpoints per ID.}
+\label{tab:primary}
+\centering\footnotesize
+\begin{tabular}{lrr}
+\toprule
+Measure & Fixed-point & Camera-informed\\
+\midrule
+Helpfulness (1--5) & $2.38\pm0.74$ & $4.00\pm0.76$\\
+Timing (1--5) & $2.25\pm0.71$ & $3.88\pm0.99$\\
+Help match (1--5) & $2.38\pm0.52$ & $4.13\pm0.64$\\
+Initial accuracy (\%) & $58.3\pm15.4$ & $70.8\pm11.8$\\
+Final accuracy (\%) & $75.0\pm15.4$ & $95.8\pm11.8$\\
+Improvement (pp) & $16.7\pm25.2$ & $25.0\pm15.4$\\
+Explanation score (\%) & $66.7\pm17.8$ & $83.3\pm17.8$\\
+Confusion (1--5) & $3.17\pm0.18$ & $3.17\pm0.31$\\
+Input response (s) & $25.78\pm5.04$ & $26.12\pm6.51$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Perceptions and Accuracy by Strategy}
+The recorded camera-informed condition gives the highest means for all three perception dimensions (Table~\ref{tab:primary}). The largest point difference is desired-help match, $4.125-2.375=1.750$ scale points; helpfulness and timing each differ by $1.625$. Paired across the eight logged IDs, camera-minus-fixed differences average $1.625\pm1.408$ for helpfulness, $1.625\pm1.506$ for timing, and $1.750\pm0.886$ for match. The lowest subjective mean is fixed-point timing at 2.25, whereas the best is camera-informed help match at 4.13.
+
+For the eight sessions, final-answer accuracy is $23/24=95.8\%$ under camera-informed guidance compared with $18/24=75.0\%$ for fixed-point guidance. Initial accuracy is $17/24=70.8\%$ versus $14/24=58.3\%$. The camera condition contains six incorrect-to-correct changes; fixed contains four. Neither contains correct-to-incorrect changes. Thus net improvements are $+25.0$ versus $+16.7$ percentage points, but initial accuracy was already different, so the gap in final accuracy is not proof of better intervention. Secondary evidence-based explanation scores are 20/24 versus 16/24; confusion ratings average 3.17 in both conditions.
+
+\begin{table}[t]
+\caption{Recorded event counts (24 checkpoints per condition) and case duration (8 cases per condition). Speech-delivery flags were not populated in the exported logs and are not reported.}
+\label{tab:events}
+\centering\footnotesize
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lrr}
+\toprule
+Measure & Fixed-point & Camera-informed\\
+\midrule
+Hint offers & 24/24 & 12/24\\
+Hints marked accepted/delivered in logs & 8 & 9\\
+Incorrect$\rightarrow$correct revisions & 4 & 6\\
+Correct$\rightarrow$incorrect revisions & 0 & 0\\
+No-nudge responses & 0 & 7\\
+Neutral-encouragement responses & 0 & 5\\
+Case duration (s, mean$\pm$SD) & $253.1\pm31.8$ & $256.3\pm24.0$\\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\subsection{Best and Worst Conditions per Measure}
+Camera-informed guidance is numerically best and fixed-point worst on helpfulness (4.00 vs 2.38), timing (3.88 vs 2.25), help match (4.13 vs 2.38), initial accuracy (70.8\% vs 58.3\%), final accuracy (95.8\% vs 75.0\%), improvement (25.0 vs 16.7 percentage points), and explanation score (83.3\% vs 66.7\%). Perceived confusion is tied (3.17 in both). Fixed-point is marginally best on input-response time (25.78 s vs 26.12 s) and case duration (253.1 s vs 256.3 s), with differences far smaller than the SDs. Fixed-point offered the most hints (24 vs 12). The pattern is consistent: the strategy that offered fewer, selectively triggered hints received higher ratings and had higher accuracy, but the two conditions also differ in initial accuracy, case, and period.
+
+\subsection{Order and Operating Constraints}
+In the recorded sessions, mean helpfulness falls from 4.50 for camera-first cases to 3.50 for camera-second cases, and from 3.00 for fixed-first to 1.75 for fixed-second cases. Timing falls from 4.50 to 3.25 under camera guidance and from 2.75 to 1.75 under fixed guidance. This observed-in-file period pattern is consistent with a possible fatigue scenario, \emph{not proof} that users grew impatient; case differences, learning, and initial expectations could also account for future observed changes. Average case duration is about 4.2 minutes in both strategies. A stated robot execution rate based on the ``false'' flags would be misleading: the speech-status flags in the exported logs are not populated reliably and do not establish audio playback success or failure. Likewise, VLM sensitivity, false-positive rate, and inference latency cannot be computed from the exported fields.
+
+\section{Discussion}
+\subsection{Selective Help and Perceived Appropriateness}
+The descriptive data suggest a potentially important trade-off: the camera-informed policy offers half as many hints (12 versus 24) while its logged responses prefer the resulting timing and match. The pattern is compatible with the design hypothesis that always asking may become repetitive, particularly during a reasoning task. However, because the two conditions differ in multiple components, they cannot isolate whether the camera, the VLM, or the controller produces the benefit. Abbo and Belpaeme's work \cite{abbo2025blind} supports the feasibility of vision-contextualized dialogue; our proposed contribution would be testing whether such context improves \emph{when} identical hints are offered.
+
+\subsection{Task Performance, Baseline, and Timing}
+The larger recorded final-accuracy gap is partly present before hints: initial accuracy already favors the camera condition by 12.5 percentage points. A real study should report within-person changes, initial ability, hint uptake, and per-case question difficulty, not attribute final performance entirely to adaptivity. The response-latency field measures how long participants took to type after the question, not system response speed; future runs need direct measures of VLM inference and audible robot latency. Zabala \emph{et al.} \cite{zabala2025storytelling} point to long generative response times as an interaction challenge; distinguishing human deliberation from model delay is essential for evaluating it.
+
+\subsection{Repeated Cases and Autonomy}
+The recorded second-case drop suggests a worthwhile pre-registered question about fatigue and repetitiveness. A shorter protocol, practice round, and brief break may help future evaluation, but the causal explanation for this order effect remains uncertain. Li and Ross \cite{li2023hmm,li2023invoking} also caution against overconfident interpretation of behavioral correlates of confusion. Our design accordingly treats visual output as an uncertain cue and preserves the user's ability to decline assistance. This restricted, human-in-the-loop action space is a practically testable HRI design contribution even without free-form robot speech generation.
+
+\section{Limitations and Future Work}
+\textbf{First, sample size, rushed redesign, and environment.} Eight participants provide limited statistical power and generalizability, and the task was redesigned, implemented, and run within one day after microphone problems blocked the original design, so there was no pilot phase. The shared lab was noisy because other teams were testing audio models, which may have disturbed participants' reasoning and affected both accuracy and ratings; some sessions had to be repeated. A quieter room and a pilot would improve internal validity and replication.
+
+\textbf{Second, confounds and measurement.} Camera access and assistance policy change simultaneously, making an isolated visual contribution unidentifiable. A third, no-camera adaptive condition could isolate the marginal benefit of the frame. Case content and condition order are counterbalanced, but within-person transfer, disappointment after repeated prompts, and fatigue could still bias estimates. Single-frame cues lack temporal context; retrospective confusion and one-item ratings are imperfect measures; and lexical explanation scoring can reject correct paraphrases. Future work should add calibrated human ratings, temporal cues, and preregistered order analysis.
+
+\textbf{Third, hardware evidence and reproducibility.} Image capture can be checked only through the separately stored frame files, which exist only for consenting participants, and the exported fields do not let us verify TTS playback or model timing, so we cannot report those system metrics. Because not every participant consented to image and video sharing, our visual evidence and demonstration video cover only a subset of sessions. Future work should record synchronized frame, inference, action, and audio-delivery logs, with private images kept out of public GitHub, and should separate real robot and model failures from missing trials.
+
+\section{Conclusion and Reproducibility}
+We specify a reproducible two-condition Reachy Mini guidance architecture and an evaluation that jointly measures participant perception and objective answer revision. In the eight-participant dataset, camera-informed guidance is associated with more favorable ratings and final accuracy, fewer hint offers, and a second-case decline in recorded ratings. The results are descriptive and should not be interpreted as an isolated causal estimate of camera use. The development history and noisy-lab conditions above should be considered when interpreting these results.
+
+The implementation and protocol are public at \url{https://github.com/fanning13/HRI-lab333/tree/main/guidance_study}; raw session CSVs and participant images are not included because they contain participants' typed responses and faces, and aggregate statistics are generated from them by \texttt{analyze\_results.py}. Important entry points are \texttt{run\_study.py}, \texttt{models.py}, \texttt{robot\_io.py}, \texttt{protocol.md}, and \texttt{task\_materials.json}.  \textbf{Demo video (consenting participants only): \url{https://drive.google.com/drive/folders/1KQmbK1nYUo2-PXA0Jl994M648heiw137}.}
+
+\begin{thebibliography}{9}
+\bibitem{li2023hmm} N. Li and R. Ross, ``Hmm, You Seem Confused! Tracking Interlocutor Confusion for Situated Task-Oriented HRI,'' in \emph{Proc. ACM/IEEE HRI}, 2023, pp. 142--151, doi: \href{https://doi.org/10.1145/3568162.3576999}{10.1145/3568162.3576999}.
+\bibitem{li2023invoking} N. Li and R. Ross, ``Invoking and Identifying Task-Oriented Interlocutor Confusion in Human--Robot Interaction,'' \emph{Frontiers in Robotics and AI}, vol. 10, 2023, doi: \href{https://doi.org/10.3389/frobt.2023.1244381}{10.3389/frobt.2023.1244381}.
+\bibitem{kim2024understanding} C. Y. Kim, C. P. Lee, and B. Mutlu, ``Understanding Large-Language Model (LLM)-Powered Human--Robot Interaction,'' in \emph{Proc. ACM/IEEE HRI}, 2024, pp. 371--380, doi: \href{https://doi.org/10.1145/3610977.3634966}{10.1145/3610977.3634966}.
+\bibitem{abbo2025blind} G. A. Abbo and T. Belpaeme, ``I Was Blind but Now I See: Implementing Vision-Enabled Dialogue in Social Robots,'' in \emph{Proc. ACM/IEEE HRI}, 2025, pp. 1176--1180, doi: \href{https://doi.org/10.1109/HRI61500.2025.10973830}{10.1109/HRI61500.2025.10973830}.
+\bibitem{zabala2025storytelling} U. Zabala, J. Echevarria, I. Rodriguez, and E. Lazkano, ``Exploring Multimodal Collaborative Storytelling with Pepper: A Preliminary Study with Zero-Shot LLMs,'' \emph{Frontiers in Robotics and AI}, vol. 12, 2025, doi: \href{https://doi.org/10.3389/frobt.2025.1662819}{10.3389/frobt.2025.1662819}.
+\bibitem{steinfeld2006common} A. Steinfeld, T. Fong, D. Kaber, M. Lewis, J. Scholtz, A. Schultz, and M. Goodrich, ``Common Metrics for Human--Robot Interaction,'' in \emph{Proc. ACM SIGCHI/SIGART Conf. Human--Robot Interaction}, 2006, pp. 33--40, doi: \href{https://doi.org/10.1145/1121241.1121249}{10.1145/1121241.1121249}.
+\end{thebibliography}
+\end{document}
