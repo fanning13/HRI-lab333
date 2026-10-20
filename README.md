@@ -34,7 +34,6 @@ The strategies differ in both camera access and the guidance-triggering policy. 
 | [`guidance_study/analysis_results.py`](guidance_study/analysis_results.py) | Descriptive analysis of a local CSV ZIP |
 | [`LaTex Paper/lab3_guidance_submission.tex`](LaTex%20Paper/lab3_guidance_submission.tex) | **Current report source** |
 | [`LaTex Paper/README.md`](LaTex%20Paper/README.md) | Notes on paper versions |
-| [`build_paper.sh`](build_paper.sh) | Compiles the current report PDF |
 
 **Important:** `guidance_study/` is the experiment used for the current submission. `lab3_confusion_storytelling_draft.tex` documents an earlier design and should not be interpreted as the evaluated procedure. `LaTex Paper/run_file.tex` is the original template, not the current paper.
 
