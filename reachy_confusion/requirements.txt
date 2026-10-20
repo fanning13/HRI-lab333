@@ -1,6 +1,0 @@
-openai>=1.50
-python-dotenv>=1.0
-reachy-mini
-opencv-python
-numpy
-webrtcvad-wheels>=2.0.14
