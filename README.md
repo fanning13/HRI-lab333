@@ -32,6 +32,8 @@ The strategies differ in both camera access and the guidance-triggering policy. 
 | [`guidance_study/counterbalancing.md`](guidance_study/counterbalancing.md) | Four case/condition sequences |
 | [`guidance_study/test_run_study.py`](guidance_study/test_run_study.py) | Mocked automated tests |
 | [`guidance_study/analysis_results.py`](guidance_study/analysis_results.py) | Descriptive analysis of a local CSV ZIP |
+| [`reachy_lego/`](reachy_lego/) | Separate ArUco block scanner for Reachy Mini |
+| [`tools/generate_markers.py`](tools/generate_markers.py) | Printable marker sheets for that scanner |
 | [`LaTex Paper/lab3_guidance_submission.tex`](LaTex%20Paper/lab3_guidance_submission.tex) | **Current report source** |
 | [`LaTex Paper/README.md`](LaTex%20Paper/README.md) | Notes on paper versions |
 
@@ -57,6 +59,16 @@ python run_study.py --simulate
 ```
 
 For a real session, first complete the hardware setup and run `python run_study.py --components`, then `python run_study.py`. Refer to the study README for details and optional flags.
+
+## LEGO action blocks
+
+[`reachy_lego/`](reachy_lego/) is a separate scanner. It does not change the guidance study. Students stack blocks with ArUco markers; Scan reads one frame and Reachy plays the mapped moves. Setup, printing, and the dry run are in [`reachy_lego/README.md`](reachy_lego/README.md).
+
+```bash
+python -m unittest reachy_lego.test_lego
+python tools/generate_markers.py
+python -m reachy_lego --dry-run --image reachy_lego/markers/10_look_left.png
+```
 
 ## Report and demo video
 

@@ -1,0 +1,57 @@
+{
+  "dictionary": "DICT_6X6_250",
+  "side_px": 600,
+  "margin_px": 100,
+  "print_instructions": "Print each sheet at the same scale. The marker itself must stay square: scale uniformly, and do not crop the black border or the white margin. To change the printed size, rerun this tool with --side PIXELS or scale uniformly in the print dialog. Attach the printed marker flat on the camera-facing side of the block. The camera must see every marker in the stack; a hidden marker cannot be decoded.",
+  "markers": [
+    {
+      "marker_id": 10,
+      "label": "Look left",
+      "syntax": "head.turn_left()",
+      "action_key": "look_left",
+      "file": "10_look_left.png"
+    },
+    {
+      "marker_id": 11,
+      "label": "Look right",
+      "syntax": "head.turn_right()",
+      "action_key": "look_right",
+      "file": "11_look_right.png"
+    },
+    {
+      "marker_id": 12,
+      "label": "Nod yes",
+      "syntax": "head.nod()",
+      "action_key": "nod",
+      "file": "12_nod.png"
+    },
+    {
+      "marker_id": 13,
+      "label": "Shake head",
+      "syntax": "head.shake_no()",
+      "action_key": "shake_head",
+      "file": "13_shake_head.png"
+    },
+    {
+      "marker_id": 14,
+      "label": "Wiggle antennas",
+      "syntax": "antennas.wiggle_both()",
+      "action_key": "wiggle_antennas",
+      "file": "14_wiggle_antennas.png"
+    },
+    {
+      "marker_id": 15,
+      "label": "Twist body left",
+      "syntax": "body.turn_left()",
+      "action_key": "body_twist_left",
+      "file": "15_body_twist_left.png"
+    },
+    {
+      "marker_id": 16,
+      "label": "Twist body right",
+      "syntax": "body.turn_right()",
+      "action_key": "body_twist_right",
+      "file": "16_body_twist_right.png"
+    }
+  ]
+}
