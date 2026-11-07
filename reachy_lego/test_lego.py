@@ -341,6 +341,27 @@ class MotionCommandTests(unittest.TestCase):
         self.assertEqual(last["antennas"], [0.0, 0.0])
 
 
+class RuntimeTests(unittest.TestCase):
+    def test_symlinks_libpython_where_the_camera_plugin_looks(self):
+        import sys
+
+        from reachy_lego import runtime
+
+        source = runtime.libpython_dylib()
+        if source is None:
+            self.skipTest("this Python has no libpython dylib")
+        with tempfile.TemporaryDirectory() as tmp:
+            library_dir = Path(tmp)
+            dest = runtime.expose_libpython(library_dir)
+            self.assertEqual(dest, library_dir / source.name)
+            self.assertTrue(dest.is_symlink())
+            self.assertEqual(dest.resolve(), source.resolve())
+            dest.unlink()
+            dest.symlink_to(source)
+            again = runtime.expose_libpython(library_dir)
+            self.assertEqual(again, dest)
+
+
 class ConnectionTests(unittest.TestCase):
     def test_no_address_is_hard_coded(self):
         for path in PACKAGE.glob("*.py"):
@@ -382,6 +403,29 @@ class ConnectionTests(unittest.TestCase):
 
 
 class GuiTests(unittest.TestCase):
+    def test_old_mac_tk_draws_the_camera_and_scan_state(self):
+        try:
+            import tkinter
+
+            from reachy_lego.gui import compose_view, needs_drawn_window
+        except ModuleNotFoundError as exc:
+            self.skipTest(str(exc))
+        self.assertEqual(needs_drawn_window(), tkinter.TkVersion < 8.6)
+        image, button = compose_view(
+            AppState.SCANNING,
+            "Scanning the stack.",
+            "Connected to Reachy",
+            np.zeros((40, 40, 3), dtype=np.uint8),
+            (),
+            None,
+            "",
+            False,
+        )
+        self.assertEqual(image.shape[1], 960)
+        self.assertEqual(image.shape[2], 3)
+        x0, y0, x1, y1 = button
+        self.assertGreater(y1, y0)
+        self.assertTrue(np.any(image[y0 + 4:y1 - 4, x0 + 4:x1 - 4] != image[0, 0]))
     def test_dry_run_window_shows_the_sequence_and_records_keys(self):
         try:
             import tkinter

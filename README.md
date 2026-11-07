@@ -62,12 +62,13 @@ For a real session, first complete the hardware setup and run `python run_study.
 
 ## LEGO action blocks
 
-[`reachy_lego/`](reachy_lego/) is a separate scanner. It does not change the guidance study. Students stack blocks with ArUco markers; Scan reads one frame and Reachy plays the mapped moves. Setup, printing, and the dry run are in [`reachy_lego/README.md`](reachy_lego/README.md).
+[`reachy_lego/`](reachy_lego/) is a separate scanner. It does not change the guidance study. Students stack blocks with ArUco markers, press Scan once, and Reachy plays the mapped moves. Install, robot address, printing, and the live run are in [`reachy_lego/README.md`](reachy_lego/README.md).
+
+Leave the project `.venv` deactivated. That Python has no Tk, so the window cannot start. From the repository root, with a Python that includes Tk:
 
 ```bash
-python -m unittest reachy_lego.test_lego
-python tools/generate_markers.py
-python -m reachy_lego --dry-run --image reachy_lego/markers/10_look_left.png
+python -m pip install -r reachy_lego/requirements.txt
+python -m reachy_lego
 ```
 
 ## Report and demo video

@@ -1,12 +1,69 @@
 # Reachy LEGO scanner
 
-The guidance study stays in `guidance_study/`. This package is a separate
-scanner: students stack LEGO-like blocks, each with an ArUco marker, and
-Reachy plays the actions from top to bottom.
+Students stack LEGO-like blocks. Each block has an ArUco marker. Press **Scan** once and Reachy Mini plays those actions from top to bottom, then does a short celebration.
 
-It does not run missions, check answers, or call a model. Marker IDs are
-read with OpenCV ArUco. The code shown on screen comes from
-`block_library.py` and is never executed.
+This package does not change the guidance study. It does not run missions, score answers, or call a model. The syntax on screen comes from `block_library.py` and is never executed.
+
+## What you need
+
+- The Reachy Mini on the same network as your computer. Its daemon is already running on the robot. Do not start a daemon on your laptop.
+- Python 3.10 or newer that includes Tk. The repo `.venv` is Python 3.11.9 built without Tk, so leave that virtualenv deactivated for this program.
+- One OpenCV install that includes ArUco. Do not install both `opencv-python` and `opencv-contrib-python`.
+
+## 1. Install
+
+From the repository root, with `.venv` **not** active:
+
+```bash
+python -c "import tkinter; print(tkinter.TkVersion)"
+python -m pip install -r reachy_lego/requirements.txt
+python -c "import cv2; print(cv2.__version__, hasattr(cv2, 'aruco'))"
+```
+
+The Tk check must print a version, not an import error. The OpenCV check must print `True`.
+
+`reachy-mini` 1.12 matches the robot and requires Python 3.11 or newer. On Python 3.10, pip installs 1.8.4 instead. The program still runs. The terminal will warn that the SDK and daemon versions differ.
+
+If `hasattr(cv2, 'aruco')` is `False` and you do not already have `opencv-python` installed, install `opencv-contrib-python`. If `opencv-python` is already installed, do not add the second wheel.
+
+## 2. Point at the robot
+
+`guidance_study/.env` is gitignored. Add the robot’s address there, or pass it on the command line. Do not commit that file.
+
+```bash
+REACHY_IP=192.168.8.199
+```
+
+`192.168.8.199` is the lab Reachy used with the guidance study. If your robot is different, use its address. Confirm the daemon before opening the scanner:
+
+```bash
+curl http://192.168.8.199:8000/api/daemon/status
+```
+
+You can also skip the env file and run `python -m reachy_lego --robot-ip 192.168.8.199`.
+
+## 3. Run
+
+From the repository root, not from inside `reachy_lego/`:
+
+```bash
+python -m reachy_lego
+```
+
+The terminal prints `Connecting to Reachy at ...` first. The window opens after that connection finishes. It is titled **Reachy LEGO** and shows the robot’s camera.
+
+1. Stack the printed markers so Reachy’s camera can see every square. A covered marker is skipped.
+2. Press **Scan**, or the **S** key. Holding a marker in view does not start a scan.
+3. The window says **SCANNING**, then lists the actions from top to bottom and Reachy plays them.
+4. Reachy celebrates and the window says **Dance complete!**
+5. Press **Esc**, or close the window, to quit. **Ctrl+C** in the terminal also stops it.
+
+Only one computer should connect at a time.
+
+These lines are normal and do not mean the scan failed:
+
+- `No Reachy Mini Audio USB device found` — this scanner does not use the microphone.
+- `SDK=1.8.4, daemon=1.12.0` — expected when the interpreter is Python 3.10.
 
 ## Actions
 
@@ -22,84 +79,25 @@ Dictionary `DICT_6X6_250`.
 | 15 | Twist body left | `body.turn_left()` | `body_twist_left` |
 | 16 | Twist body right | `body.turn_right()` | `body_twist_right` |
 
-Repeated blocks may share an ID. Each visible copy is kept, in order from
-top to bottom.
-
-## OpenCV
-
-This workspace already has one OpenCV wheel, `opencv-python` 5.0.0, and
-that build includes `cv2.aruco.generateImageMarker` and `ArucoDetector`.
-Do not also install `opencv-contrib-python`. The two wheels conflict.
-
-On OpenCV 4.7 through 4.x, ArUco lives in the contrib package. Install
-`opencv-contrib-python` instead of `opencv-python`, still only one wheel.
+Two blocks may use the same ID. Each visible copy is kept, ordered from top to bottom. An empty view or an unknown marker does not move the robot.
 
 ## Print the markers
 
-From the repository root, with the project virtualenv active:
+Sheets are already in `reachy_lego/markers/` (`10_look_left.png` through `16_body_twist_right.png`). Print at 100% scale. Do not crop the black border or the white margin, and do not stretch the square. Tape each sheet flat on the side that faces the camera.
+
+Regenerate them from the repository root if you need a different size:
 
 ```bash
 python tools/generate_markers.py
+python tools/generate_markers.py --side 800
 ```
 
-Sheets land in `reachy_lego/markers/` as `10_look_left.png` and the rest,
-plus `manifest.json`. The default marker square is 600 pixels. Change it
-with `--side 800`. Scale the page uniformly in the print dialog if the
-block face needs a different size. Do not crop the black border or the
-white margin, and do not stretch the square.
-
-Attach each print flat on the camera-facing side. The camera has to see
-every marker in the stack. A hidden marker cannot be decoded. The green
-outlines in the app are the marker squares ArUco found, not the edges of
-the plastic blocks.
-
-## Run
-
-From the repository root:
+## Without the robot
 
 ```bash
 python -m reachy_lego --check
 python -m unittest reachy_lego.test_lego
 python -m reachy_lego --dry-run --image reachy_lego/markers/10_look_left.png
-python -m reachy_lego
 ```
 
-`--check` prints the registry and does not open a window.
-
-The window is Tkinter. Press Scan once. The app freezes that frame, plays
-a short scan line, then reads the markers. It shows the labels and the
-display syntax, runs each mapped move, plays a short fixed celebration,
-and shows “Dance complete!” Scan stays disabled until the run is over.
-
-Reachy is reached the same way as the guidance study: `REACHY_IP` in the
-environment or in `guidance_study/.env`, or `--robot-ip`. The address is
-not hard-coded. The connection is network mode with the default media
-backend. Camera frames are not written to disk.
-
-`--dry-run` decodes the stack and records the action keys it would run.
-It does not connect to Reachy and does not move it. Add `--image` or
-`--webcam` so Scan has a picture. `--webcam` is this computer's camera,
-not Reachy's.
-
-The project `.venv` is Python 3.11.9 from pyenv and was built without Tk,
-so `python -m reachy_lego` exits with a short message in that interpreter.
-Tests do not need a window. A Python that includes Tk can run the same
-module; this machine's pyenv 3.10.13 has Tk 8.5 plus OpenCV and can run
-the dry-run window. The Reachy SDK used here is installed in `.venv`.
-
-If a real connection reports `No module named 'gi'`, the GStreamer path
-files are hidden because this repo is on an iCloud Desktop. The guidance
-study README has the `chflags nohidden` command for this virtualenv.
-
-## What still needs a physical Reachy Mini
-
-The tests check marker generation, ordering, registry lookup, the dry-run
-recorder, and the poses sent to `goto_target`. They do not move hardware.
-
-On a robot, confirm:
-
-- The camera preview appears, and Scan uses one frame rather than detecting continuously.
-- Look left and twist body left match the labels. The commanded signs follow the course helpers (positive head yaw and positive body yaw are left; positive pitch looks down; antennas are `[right, left]` radians). A live check is still the confirmation.
-- The moves feel small. Caps are 18° of head yaw, 12° nod, 0.40 rad antennas, and 0.18 rad body yaw, each at least 0.5 s.
-- A stack with a repeated marker runs both copies, then the celebration, then returns to Ready.
-- An empty scan or an unknown marker leaves the robot still.
+`--check` prints the registry and exits. `--dry-run` does not connect and does not move Reachy. Add `--image` or `--webcam` so Scan has a picture. `--webcam` is this computer’s camera, not Reachy’s.

@@ -44,6 +44,11 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.image and args.webcam:
         raise SystemExit("Pass either --image or --webcam, not both.")
+    from reachy_lego.runtime import expose_libpython, install_force_stop
+
+    install_force_stop()
+    if not args.dry_run:
+        expose_libpython()
 
     from reachy_lego.connection import connect_reachy, disconnect_reachy, resolve_robot_host
     from reachy_lego.frames import StillFrames, UnavailableFrames, WebcamFrames, ReachyFrames, load_image
