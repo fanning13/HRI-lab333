@@ -104,13 +104,48 @@ Based on the teacher panel feedback, we revised our initial individual turn-taki
 
 \subsection{Iterative Design}
 
-Our design process involved several stages of ideation, physical prototyping, and functional testing. We began by developing a Scratch-inspired game plan and identifying movement commands that could be represented through tangible coding blocks. Our initial concept used color-coded blocks to distinguish different command categories, including head movements, antenna movements, body rotation, and repetition.
+Our design process involved several stages of ideation, physical prototyping, and functional testing. We began with a Scratch-inspired game plan and with character studies for Reachy Mini. An early model dressed the robot as a jester, with a two-point hat, round glasses, and a small badge, as in Fig.~\ref{fig:jester-concept}. A follow-up sheet developed that model into front, side, back, three-quarter, top, and exploded views, and it still marked physical fit and range of motion as unchecked (Fig.~\ref{fig:jester-views}).
 
-As the design progressed, we developed a more consistent physical form inspired by Reachy Mini's appearance. We modeled rounded rectangular blocks with white bodies and black circular facial elements resembling Reachy's glasses. Four cylindrical studs on the top of each block allow multiple blocks to be stacked vertically, translating the concept of sequential programming into a physical assembly process.
+\begin{figure*}[t]
+    \centering
+    \subfloat[First character concept. Reachy wears a jester hat, round glasses, and a badge.]{%
+        \includegraphics[width=0.40\textwidth]{"design process/Reachy logo first concept .png"}%
+        \label{fig:jester-concept}}
+    \hfil
+    \subfloat[First character iteration. The same jester model is shown from the front, side, back, a three-quarter view, the top, and as an exploded set of parts.]{%
+        \includegraphics[width=0.56\textwidth]{"design process/Reachy Logo first iteration.png"}%
+        \label{fig:jester-views}}
+    \caption{Early jester character studies for Reachy Mini, before the embodiment shifted toward a cow.}
+    \label{fig:jester}
+\end{figure*}
+
+We then turned the embodiment toward a cow. The concept board in Fig.~\ref{fig:moobot} calls the character MooBot, a cow-themed Reachy Mini. It specifies a removable costume: 3D-printed horns, felt ears, a fabric collar with a bell, a spotted fleece cover, and a pom-pom tail. The board also records the constraints we kept for the costume that was later built in yarn. Head tilt and rotation stay visible, the cover stays lightweight and removable, and it does not block the cameras or the antennas.
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.98\textwidth]{"design process/Disco Moo concept.png"}
+    \caption{Cow-themed embodiment concept for Disco Moo. The board shows the costume from several sides and separates 3D-printed parts, laser-cut parts, and the soft cover.}
+    \label{fig:moobot}
+\end{figure*}
+
+The coding blocks went through a similar pass from sketch to rendered mockup. Our initial plan used color-coded blocks for head movements, antenna movements, body rotation, and repetition. The sketches in Fig.~\ref{fig:block-sketch} divide each block into four faces: the command on the front, Reachy's eyes on the top, an ArUco marker on the back, and the connecting face on the bottom. The mockups in Fig.~\ref{fig:block-mockups} then compared two characters for that block. One wears a jester hood with bells. The other is a plain block with two black eyes and a central post for stacking. The blocks we printed, described in Section 4, kept the Reachy face and the vertical stack, and simplified the face into a glasses-like bridge with four studs.
+
+\begin{figure*}[t]
+    \centering
+    \subfloat[Block sketches. Each drawing labels one face: front, top, back, or bottom.]{%
+        \includegraphics[width=0.42\textwidth]{"design process/lego block sketch.png"}%
+        \label{fig:block-sketch}}
+    \hfil
+    \subfloat[Rendered block mockups. A jester-hood version sits beside a plain block with Reachy's eyes and a stacking post.]{%
+        \includegraphics[width=0.54\textwidth]{"design process/lego block mockups.png"}%
+        \label{fig:block-mockups}}
+    \caption{Development of the tangible coding block, from a four-face sketch to two character mockups.}
+    \label{fig:blocks}
+\end{figure*}
 
 We used 3D modeling and physical prototyping to investigate the blocks' connection mechanism. In particular, we produced variations with socket dimensions of 14.00 mm, 14.01 mm, 14.02 mm, and 14.03 mm to evaluate how dimensional tolerances affect the fit between blocks. This process allowed us to consider both connection stability and ease of assembly.
 
-In parallel, we explored ArUco markers as a method for translating physical block arrangements into executable robot instructions. We printed the markers on paper and successfully tested their recognition and corresponding Reachy Mini movements through a camera-based interface. The interface includes a camera view and a Scan control for initiating execution. Although this established the feasibility of the recognition system, integrating the markers directly onto the 3D-printed blocks remains a future step.
+In parallel, we explored ArUco markers as a method for translating physical block arrangements into executable robot instructions. We printed the markers on paper and successfully tested their recognition and corresponding Reachy Mini movements through a camera-based interface. Each card pairs the marker with a move name and the command Reachy will run. Fig.~\ref{fig:sample-marker} shows the card for look right. The interface includes a camera view and a Scan control for initiating execution. Although this established the feasibility of the recognition system, integrating the markers directly onto the 3D-printed blocks remains a future step.
 
 The teacher panel also informed an important iteration in our interaction design. Our original game plan involved students completing challenges individually, with incorrect answers ending their turns. Following the teachers' recommendations, we shifted toward collaborative problem-solving, progressive challenges, and constructive feedback.
 
@@ -191,7 +226,14 @@ Our functional testing demonstrated that paper-printed ArUco markers could be re
 
 \subsection{Additional Research Output}
 
-In addition to the physical coding blocks and the robot embodiment, we developed a camera-based interface that reads an ordered stack of ArUco markers and sends the corresponding commands to Reachy Mini. This is the screen a student would use to check which program the camera recognized and which step Reachy is carrying out. The prototype is titled Reachy LEGO. Figures~\ref{fig:ui-states} and~\ref{fig:ui-execution} show it during a feasibility test with paper markers.
+In addition to the physical coding blocks and the robot embodiment, we developed a camera-based interface that reads an ordered stack of ArUco markers and sends the corresponding commands to Reachy Mini. This is the screen a student would use to check which program the camera recognized and which step Reachy is carrying out. The prototype is titled Reachy LEGO. Figures~\ref{fig:ui-states} and~\ref{fig:ui-execution} show it during a feasibility test with paper markers. Fig.~\ref{fig:sample-marker} shows one of those cards. The pattern is an ArUco marker from the \texttt{DICT\_6X6\_250} dictionary. Under it, the card prints the move name, the command \texttt{head.turn\_right()}, and the instruction to attach the card flat and facing the camera so that every marker in the stack remains visible.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.78\linewidth]{"additional research output/sample ArUco marker.png"}
+    \caption{Sample paper marker for look right. The card combines the ArUco pattern, the move name, the command sent to Reachy, and the placement instruction for the camera.}
+    \label{fig:sample-marker}
+\end{figure}
 
 The screen has four parts: a status bar, a short instruction, a live camera view, and a Sequence panel. In the ready state, the status bar reads READY and reports that the interface is connected to Reachy. The instruction asks the student to hold the stack in front of Reachy and press Scan. Until that scan succeeds, the Sequence panel states that the scanned sequence will appear there, as in Fig.~\ref{fig:ui-ready}.
 
