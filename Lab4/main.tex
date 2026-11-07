@@ -1,0 +1,220 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{array,tabularx}
+\usepackage{graphicx,xcolor,float}
+\usepackage[hidelinks]{hyperref}
+
+% Fill in the placeholders. Add table rows as needed.
+\renewcommand{\thesection}{\arabic{section}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\renewcommand{\arraystretch}{1.25}
+\newcommand{\fillin}[1]{\textcolor{gray}{\textit{[#1]}}}
+\newcommand{\entry}[2]{\par\medskip\noindent\textbf{#1}\par\fillin{#2}\par}
+\newcommand{\blank}{\fillin{---}}
+\newcommand{\figureplaceholder}[1]{\fbox{\parbox[c][1in][c]{0.92\linewidth}{\centering\fillin{#1}}}}
+
+\title{Lab 4: Design, Prototyping, and Anthropomorphization\\
+\large INFO 5356: Introduction to Human-Robot Interaction}
+\author{
+\IEEEauthorblockN{\fillin{Elliot Zhang, Yifan (Fanning) Luo, Jaclyn Pham, Jiaxin (Aurora) Shen}}
+\IEEEauthorblockA{Cornell Tech\\
+\{\fillin{qz432, yl4389, cqp4, js3996}\}@cornell.edu}
+}
+
+\begin{document}
+\maketitle
+
+
+\section{Introduction}
+
+Disco Moo is an educational human-robot interaction game designed to introduce K--12 students, particularly middle school learners, to foundational programming concepts through tangible, block-based coding. Inspired by Scratch, the game transforms conventional screen-based programming into a physical activity in which students assemble 3D-printed coding blocks to control a cow-themed Reachy Mini robot.
+
+Each block represents a programming instruction, such as turning the robot's head, performing a movement, or repeating an action. The blocks incorporate ArUco markers that allow the system to visually recognize and interpret the assembled commands. During gameplay, Reachy presents a dance challenge, and students construct a sequence of blocks to produce the requested movements. Through a camera-based interface, the program can be scanned and executed by Reachy, providing a physical demonstration of the relationship between code and robotic behavior.
+
+The game primarily focuses on three computational thinking concepts: sequencing, repetition, and debugging. By arranging, testing, and revising physical instructions, students can explore how programming logic translates into observable actions without needing prior experience writing Python code. The design also creates opportunities for collaborative problem-solving and progressive learning, informed by feedback from a K--12 teacher panel.
+
+For Lab 4, our team developed a preliminary functional prototype, including 3D-printed interlocking coding blocks, paper-based ArUco marker recognition, a camera-based execution interface, and a customized cow-inspired robot embodiment. These components establish the foundation for further integration and evaluation in the final project.
+
+
+
+\section{Teacher Interviews}
+
+\subsection{Interview Questions and Responses}
+
+Our team participated in the K--12 Teacher Panel on October 28, 2026, to gather educators' perspectives on designing an interactive robotic game for middle school students. We collected notes from five teachers.
+
+We prepared four questions to understand students' programming experiences, common learning challenges, and opportunities for integrating physical robotics into computer science education:
+
+\begin{enumerate}
+    \item What CS courses or topics do you teach to middle school students, and at which grade levels?
+    \item Which programming languages, platforms, or tools do your students use?
+    \item Which programming concepts do you teach, and which do students find most challenging?
+    \item How could physical coding blocks and a moving robot support the concepts you teach? Which concepts seem like the best fit, and why?
+\end{enumerate}
+
+The teachers discussed Scratch, block-based programming, and Python as common tools for introducing programming concepts. They emphasized that students should develop foundational computational thinking skills rather than rely solely on AI-assisted coding tools.
+
+Teachers also highlighted the importance of breaking complex programming tasks into manageable steps. Visual and verbal instructions were recommended to support students with different learning needs, including English language learners and students with disabilities.
+
+Regarding feedback, teachers recommended providing specific, encouraging hints instead of immediately revealing correct answers. They also emphasized collaborative activities and rotating student roles to ensure participation when classroom access to robots is limited.
+
+Finally, teachers stressed that educational robotics activities should align with curriculum objectives and remain feasible within classroom time and resource constraints.
+
+\subsection{Thematic Analysis}
+
+We reviewed the October 28 teacher panel transcript and conducted an inductive thematic analysis. Each member identified meaningful excerpts and assigned descriptive codes related to learning objectives, accessibility, feedback, engagement, and classroom participation.
+
+The team then compared the codes, discussed differences in interpretation, and grouped related findings into five major themes:
+
+\begin{enumerate}
+    \item \textbf{Foundational Computational Thinking:} Teachers emphasized sequencing, repetition, and understanding programming logic. This supported our decision to use tangible coding blocks to introduce basic programming structures.
+
+    \item \textbf{Scaffolding and Accessibility:} Teachers recommended progressively challenging tasks and multimodal instructions. In response, we designed dance missions that introduce programming concepts gradually.
+
+    \item \textbf{Constructive Feedback and Debugging:} Teachers encouraged specific hints and opportunities for students to correct mistakes. This informed our plan to incorporate supportive robot responses and visual debugging cues.
+
+    \item \textbf{Collaborative Participation:} Teachers suggested small-group activities and rotating roles to maximize student involvement. We therefore revised our original individual turn-taking concept toward collaborative problem-solving.
+
+    \item \textbf{Curriculum Alignment:} Teachers emphasized meaningful educational objectives and practical classroom implementation. Consequently, Disco Moo prioritizes transferable programming skills rather than entertainment alone.
+\end{enumerate}
+
+These findings influenced both the game mechanics and Reachy Mini's interaction design. Our initial concept required students to complete challenges individually, with incorrect answers ending their turns. Based on the panel feedback, we proposed a collaborative approach in which students can plan, assemble, test, and debug coding sequences together.
+
+We also incorporated progressive challenges and constructive feedback into the game design. Reachy is intended to provide encouraging responses, while the computer interface can display the interpreted program and debugging hints. These features aim to make programming more accessible and support students' understanding of the relationship between code and robot behavior.
+
+\subsection{Reflection}
+
+The teacher panel helped us recognize that designing an educational robotic game involves more than selecting programming concepts. Although our original questions were useful for understanding classroom programming tools and learning difficulties, the discussions revealed additional considerations related to accessibility, student participation, and constructive feedback.
+
+One important lesson was the distinction between making a robot entertaining and making it educational. While Disco Moo's cow-themed appearance and expressive dance movements may increase engagement, the gameplay must also provide opportunities to practice identifiable programming skills.
+
+The panel also challenged our initial assumption that individual turn-taking would be an effective classroom format. Teachers highlighted the importance of keeping students engaged even when they are not directly controlling the robot, encouraging us to explore rotating roles and collaborative debugging.
+
+In future interviews, we would ask more specific follow-up questions about appropriate challenge duration, group size, and methods for evaluating students' understanding of sequencing and loops. Presenting a storyboard or functional prototype could also help teachers provide more concrete feedback on the interaction design.
+
+
+
+\section{Robot Concept and Design Process}
+
+\subsection{Robot Role and Embodiment}
+
+Disco Moo is a tangible programming game in which Reachy Mini acts as both a playful dance partner and an interactive coding companion. Inspired by Scratch, the game allows students to construct programs by physically assembling modular coding blocks instead of typing commands on a computer. Each block represents an instruction, such as turning the robot's head, nodding, or repeating a movement.
+
+During gameplay, Reachy presents a dance challenge that students must solve by arranging the appropriate blocks in sequence. For example, Reachy might ask students to make it turn left, nod twice, and turn right. Students select and connect the corresponding blocks, present their program to the camera, and use the Run button to initiate recognition and execution. Reachy's physical movements provide an observable representation of the programmed instructions, helping students understand sequencing and repetition.
+
+Reachy is designed with a friendly, cow-inspired persona to make the interaction more playful and approachable for younger learners. We incorporated soft yarn around the robot's exterior to create a cow-like appearance, while retaining its expressive head movements. The robot's character is reflected in its dance-oriented challenges and planned encouraging feedback. Rather than functioning solely as a device that executes commands, Disco Moo is intended to act as a learning companion that encourages experimentation and collaborative problem-solving.
+
+Based on the teacher panel feedback, we revised our initial individual turn-taking concept toward collaborative gameplay. Students can work together to plan sequences, assemble blocks, test their programs, and identify errors. The proposed interaction also includes progressively challenging missions and supportive feedback, allowing students to practice fundamental programming concepts without requiring prior Python experience.
+
+\subsection{Iterative Design}
+
+Our design process involved several stages of ideation, physical prototyping, and functional testing. We began by developing a Scratch-inspired game plan and identifying movement commands that could be represented through tangible coding blocks. Our initial concept used color-coded blocks to distinguish different command categories, including head movements, antenna movements, body rotation, and repetition.
+
+As the design progressed, we developed a more consistent physical form inspired by Reachy Mini's appearance. We modeled rounded rectangular blocks with white bodies and black circular facial elements resembling Reachy's glasses. Four cylindrical studs on the top of each block allow multiple blocks to be stacked vertically, translating the concept of sequential programming into a physical assembly process.
+
+We used 3D modeling and physical prototyping to investigate the blocks' connection mechanism. In particular, we produced variations with socket dimensions of 14.00 mm, 14.01 mm, 14.02 mm, and 14.03 mm to evaluate how dimensional tolerances affect the fit between blocks. This process allowed us to consider both connection stability and ease of assembly.
+
+In parallel, we explored ArUco markers as a method for translating physical block arrangements into executable robot instructions. We printed the markers on paper and successfully tested their recognition and corresponding Reachy Mini movements through a camera-based interface. The interface includes a camera view and a Run button for initiating execution. Although this established the feasibility of the recognition system, integrating the markers directly onto the 3D-printed blocks remains a future step.
+
+The teacher panel also informed an important iteration in our interaction design. Our original game plan involved students completing challenges individually, with incorrect answers ending their turns. Following the teachers' recommendations, we shifted toward collaborative problem-solving, progressive challenges, and constructive feedback.
+
+Throughout the process, we considered fabrication time, available materials, and technical feasibility. 3D printing allowed us to produce reusable, interlocking blocks with consistent geometry, while paper-based marker testing enabled us to evaluate the software before completing the physical integration. These decisions helped us develop a preliminary functional prototype within the lab timeframe while identifying areas for further refinement.
+
+
+
+\section{Fabrication}
+
+\subsection{Laser-Cut Nametag}
+
+As part of the robot embodiment design, we created a custom laser-cut nametag for Disco Moo. The nametag serves as a visual identifier for Reachy's cow-inspired persona, reinforcing its identity as a playful coding companion.
+
+We used laser cutting to produce the nametag because the process allows precise fabrication of flat shapes and engraved text. Compared with 3D printing, laser cutting is more suitable for this relatively simple, two-dimensional component and requires less fabrication time.
+
+The completed nametag was incorporated into our robot embodiment alongside the soft yarn decorations used to create its cow-like appearance.
+
+% TODO: Specify the nametag material and exact engraved text.
+% TODO: Insert a photograph of the assembled nametag.
+
+\subsection{Custom Laser-Cut Part}
+
+Our fabrication process also explored how laser cutting could support the physical embodiment of Disco Moo. Laser cutting is particularly appropriate for flat decorative components that require precise outlines or engraved details, while 3D printing is better suited for the volumetric geometry of our interlocking coding blocks.
+
+% TODO: Checkpoint 4 requires a custom laser-cut
+% embodiment part, a photograph, the material used,
+% a fabrication rationale, and the corresponding design file.
+% Add the actual fabricated component here.
+
+\subsection{3D-Printed Components}
+
+We designed and fabricated modular coding blocks inspired by Reachy Mini's physical appearance. Each block features a rounded rectangular white body with two black circular elements connected by a narrow bridge, resembling Reachy's distinctive glasses. This visual design creates a consistent identity between the robot and the physical programming interface.
+
+Each block incorporates four cylindrical studs on its upper surface, allowing multiple blocks to be stacked vertically. This interlocking mechanism enables students to physically construct a sequence of programming instructions, translating abstract coding structures into tangible arrangements.
+
+During prototyping, we experimented with four socket dimensions: 14.00 mm, 14.01 mm, 14.02 mm, and 14.03 mm. These variations were designed to investigate how small dimensional differences influence the fit and stability of the connections. The tolerance testing formed an important part of our iterative fabrication process, as the blocks needed to remain connected while still being easy for students to assemble and separate.
+
+We chose 3D printing because it allowed us to fabricate three-dimensional, reusable components with consistent shapes and integrated connection features. Unlike laser cutting or simple cardboard construction, 3D printing enabled the rounded geometry and cylindrical interlocking structures to be produced as part of the block design.
+
+The physical blocks are intended to incorporate printed programming labels and ArUco markers. Each marker corresponds to a specific command that can be recognized through the camera-based interface and translated into a robot movement. We successfully tested marker recognition and robot execution using paper-printed ArUco markers. However, the markers have not yet been integrated and tested directly on the 3D-printed blocks.
+
+The resulting prototypes demonstrate the physical feasibility of the modular coding system and provide a foundation for integrating tangible programming with Reachy Mini's movements.
+
+% TODO: Insert photograph of the assembled 3D-printed blocks.
+% TODO: Include corresponding 3D modeling and printing files.
+% TODO: Specify the selected socket dimension and test outcome.
+
+
+
+
+\section{Final Robot Design}
+
+Our final Lab 4 prototype of Disco Moo combines a cow-inspired Reachy Mini embodiment with a tangible block-based programming system. The robot is decorated with soft yarn to establish a playful, approachable character, while the modular coding blocks adopt Reachy's recognizable black-and-white appearance. Together, these elements create a consistent visual identity between the robot and the physical programming interface.
+
+The design evolved through sketching and conceptual planning, 3D modeling, physical prototyping, and functional testing. Our initial concept focused on individual coding challenges using color-coded blocks. Following the teacher panel, we revised the gameplay toward collaborative problem-solving, progressive learning, and constructive feedback. We also developed a consistent physical design for the blocks, incorporating Reachy-inspired facial details and interlocking structures.
+
+The fabrication process required balancing usability, material constraints, and production time. We used 3D printing to produce reusable coding blocks with rounded geometry and integrated connection features. Testing different socket dimensions allowed us to investigate the stability and usability of the interlocking mechanism. Meanwhile, laser cutting provided an efficient method for producing the robot's personalized nametag, and yarn offered a lightweight, low-cost approach to modifying Reachy's appearance without requiring a fully redesigned body.
+
+From an affordance perspective, the cylindrical studs and corresponding sockets communicate how the blocks can be physically connected. Their stackable structure encourages students to arrange instructions in a linear sequence, making the relationship between program order and robot behavior more tangible. The rounded shapes and recognizable facial features also help distinguish the blocks as interactive learning objects rather than conventional computer components.
+
+Materiality plays an important role in the interaction experience. The rigid 3D-printed blocks provide a physical representation of programming commands, while the soft yarn surrounding Reachy creates a contrasting, approachable appearance. This combination of materials supports the game's playful identity and reinforces the relationship between physical manipulation and digital execution.
+
+The interaction design connects three elements: the student, the physical coding blocks, and Reachy Mini. Students construct programs by selecting and stacking blocks, present the sequence to the camera, and initiate execution through the Run interface. Reachy's resulting movements provide immediate, observable feedback on the interpreted commands. This interaction transforms programming from an exclusively screen-based activity into a tangible and embodied learning experience.
+
+For our selected fabricated component, we highlight the 3D-printed modular coding block. Its interlocking geometry enables physical program construction, while its Reachy-inspired appearance visually connects the programming interface to the robot. Although the blocks function as external interaction objects rather than attachments to Reachy's body, they contribute to the overall embodiment and interaction concept of Disco Moo.
+
+Our functional testing demonstrated that paper-printed ArUco markers could be recognized and translated into Reachy Mini movements. However, the complete integration of markers onto the 3D-printed blocks has not yet been tested. Future iterations will focus on integrating the physical and digital components, refining block recognition, and evaluating the interaction with students.
+
+\begin{figure}[t]
+    \centering
+    \figureplaceholder{Insert photo of the final Disco Moo prototype.}
+    \caption{Final Lab 4 prototype of Disco Moo, combining the cow-inspired Reachy Mini embodiment with modular 3D-printed coding blocks.}
+    \label{fig:finalrobot}
+\end{figure}
+
+
+\section{Discussion and Future Work}
+
+\subsection{Additional Research Output}
+
+In addition to the physical coding blocks and robot embodiment, our team developed a preliminary camera-based interface for recognizing ArUco markers and executing corresponding robot commands. This interface serves as a functional proof of concept for connecting tangible programming inputs with Reachy Mini's movements.
+
+The interface includes a camera view and a Run button that initiates marker recognition and command execution. To evaluate its feasibility, we printed ArUco markers on paper and tested whether the system could recognize the markers and translate them into robot movements. These tests successfully demonstrated the basic interaction between visual recognition, command interpretation, and physical robot execution.
+
+This software prototype provides an additional research artifact for the final project by allowing us to investigate the technical feasibility of tangible programming before integrating markers onto the 3D-printed blocks. It also helps identify future design requirements, including marker placement, camera visibility, recognition reliability, and the interpretation of multiple commands in sequence.
+
+For the selected fabricated component, we retain the 3D-printed modular coding block described in Section 5. Its interlocking structure and recognizable visual design provide the physical foundation for the proposed programming interaction.
+
+
+
+\subsection{Reflection}
+
+Developing Disco Moo helped us understand how physical fabrication, interaction design, and educational objectives must work together in human-robot interaction. One of our main challenges was translating abstract programming concepts into physical objects that are both intuitive to assemble and technically recognizable.
+
+The iterative fabrication process highlighted the importance of small dimensional adjustments in 3D printing. Testing different socket tolerances demonstrated how physical connection design can influence the usability of modular learning tools. Meanwhile, the paper-based ArUco tests allowed us to verify the basic software-to-robot interaction before completing the physical integration.
+
+The teacher panel also significantly influenced our design approach. Initially, we focused on creating an entertaining individual coding challenge. However, the teachers' feedback encouraged us to consider scaffolding, accessibility, collaboration, and constructive feedback as essential components of an educational experience. This shifted our focus from simply making Reachy perform movements toward helping students understand the programming logic behind those movements.
+
+Despite these developments, the current prototype has several limitations. Although ArUco recognition and robot execution were successfully tested using paper markers, the complete system has not yet been evaluated with markers attached to the 3D-printed blocks. Additionally, the proposed collaborative gameplay, progressive challenges, and debugging feedback require further implementation and testing.
+
+For the final project, we plan to integrate ArUco markers and programming labels onto the physical blocks, refine the recognition of assembled command sequences, and further develop the interactive game interface. We also aim to evaluate whether students can understand sequencing, repetition, and debugging through the tangible coding experience. These next steps will help us move from a preliminary functional prototype toward a more complete educational robotic game.
+
+
+\end{document}
