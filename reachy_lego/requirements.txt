@@ -1,0 +1,7 @@
+reachy-mini
+python-dotenv
+
+# One OpenCV wheel only. This workspace already installs opencv-python 5
+# with the guidance study, and that wheel includes cv2.aruco. Do not also
+# install opencv-contrib-python.
+# On OpenCV 4.7–4.x, install opencv-contrib-python instead of opencv-python.
