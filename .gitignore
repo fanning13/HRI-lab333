@@ -55,9 +55,12 @@ guidance_study/frames/*
 .pytest_cache/
 .mypy_cache/
 *.egg-info/
+<<<<<<< Updated upstream
 
 #ignore all files in ask_reachy directory
 ask_reachy/
 
 #ignore all fils in lab3
 lab3/
+=======
+>>>>>>> Stashed changes
