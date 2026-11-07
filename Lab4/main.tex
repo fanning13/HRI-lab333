@@ -1,6 +1,7 @@
 \documentclass[conference]{IEEEtran}
 \usepackage{array,tabularx}
 \usepackage{graphicx,xcolor,float}
+\usepackage[caption=false,font=footnotesize]{subfig}
 \usepackage[hidelinks]{hyperref}
 
 % Fill in the placeholders. Add table rows as needed.
@@ -95,7 +96,7 @@ In future interviews, we would ask more specific follow-up questions about appro
 
 Disco Moo is a tangible programming game in which Reachy Mini acts as both a playful dance partner and an interactive coding companion. Inspired by Scratch, the game allows students to construct programs by physically assembling modular coding blocks instead of typing commands on a computer. Each block represents an instruction, such as turning the robot's head, nodding, or repeating a movement.
 
-During gameplay, Reachy presents a dance challenge that students must solve by arranging the appropriate blocks in sequence. For example, Reachy might ask students to make it turn left, nod twice, and turn right. Students select and connect the corresponding blocks, present their program to the camera, and use the Run button to initiate recognition and execution. Reachy's physical movements provide an observable representation of the programmed instructions, helping students understand sequencing and repetition.
+During gameplay, Reachy presents a dance challenge that students must solve by arranging the appropriate blocks in sequence. For example, Reachy might ask students to make it turn left, nod twice, and turn right. Students select and connect the corresponding blocks, present their program to the camera, and press Scan to start recognition and execution. Reachy's physical movements provide an observable representation of the programmed instructions, helping students understand sequencing and repetition.
 
 Reachy is designed with a friendly, cow-inspired persona to make the interaction more playful and approachable for younger learners. We incorporated soft yarn around the robot's exterior to create a cow-like appearance, while retaining its expressive head movements. The robot's character is reflected in its dance-oriented challenges and planned encouraging feedback. Rather than functioning solely as a device that executes commands, Disco Moo is intended to act as a learning companion that encourages experimentation and collaborative problem-solving.
 
@@ -109,7 +110,7 @@ As the design progressed, we developed a more consistent physical form inspired 
 
 We used 3D modeling and physical prototyping to investigate the blocks' connection mechanism. In particular, we produced variations with socket dimensions of 14.00 mm, 14.01 mm, 14.02 mm, and 14.03 mm to evaluate how dimensional tolerances affect the fit between blocks. This process allowed us to consider both connection stability and ease of assembly.
 
-In parallel, we explored ArUco markers as a method for translating physical block arrangements into executable robot instructions. We printed the markers on paper and successfully tested their recognition and corresponding Reachy Mini movements through a camera-based interface. The interface includes a camera view and a Run button for initiating execution. Although this established the feasibility of the recognition system, integrating the markers directly onto the 3D-printed blocks remains a future step.
+In parallel, we explored ArUco markers as a method for translating physical block arrangements into executable robot instructions. We printed the markers on paper and successfully tested their recognition and corresponding Reachy Mini movements through a camera-based interface. The interface includes a camera view and a Scan control for initiating execution. Although this established the feasibility of the recognition system, integrating the markers directly onto the 3D-printed blocks remains a future step.
 
 The teacher panel also informed an important iteration in our interaction design. Our original game plan involved students completing challenges individually, with incorrect answers ending their turns. Following the teachers' recommendations, we shifted toward collaborative problem-solving, progressive challenges, and constructive feedback.
 
@@ -172,7 +173,7 @@ From an affordance perspective, the cylindrical studs and corresponding sockets 
 
 Materiality plays an important role in the interaction experience. The rigid 3D-printed blocks provide a physical representation of programming commands, while the soft yarn surrounding Reachy creates a contrasting, approachable appearance. This combination of materials supports the game's playful identity and reinforces the relationship between physical manipulation and digital execution.
 
-The interaction design connects three elements: the student, the physical coding blocks, and Reachy Mini. Students construct programs by selecting and stacking blocks, present the sequence to the camera, and initiate execution through the Run interface. Reachy's resulting movements provide immediate, observable feedback on the interpreted commands. This interaction transforms programming from an exclusively screen-based activity into a tangible and embodied learning experience.
+The interaction design connects three elements: the student, the physical coding blocks, and Reachy Mini. Students construct programs by selecting and stacking blocks, present the sequence to the camera, and press Scan to start execution. Reachy's resulting movements provide immediate, observable feedback on the interpreted commands. This interaction transforms programming from an exclusively screen-based activity into a tangible and embodied learning experience.
 
 For our selected fabricated component, we highlight the 3D-printed modular coding block. Its interlocking geometry enables physical program construction, while its Reachy-inspired appearance visually connects the programming interface to the robot. Although the blocks function as external interaction objects rather than attachments to Reachy's body, they contribute to the overall embodiment and interaction concept of Disco Moo.
 
@@ -190,13 +191,43 @@ Our functional testing demonstrated that paper-printed ArUco markers could be re
 
 \subsection{Additional Research Output}
 
-In addition to the physical coding blocks and robot embodiment, our team developed a preliminary camera-based interface for recognizing ArUco markers and executing corresponding robot commands. This interface serves as a functional proof of concept for connecting tangible programming inputs with Reachy Mini's movements.
+In addition to the physical coding blocks and the robot embodiment, we developed a camera-based interface that reads an ordered stack of ArUco markers and sends the corresponding commands to Reachy Mini. This is the screen a student would use to check which program the camera recognized and which step Reachy is carrying out. The prototype is titled Reachy LEGO. Figures~\ref{fig:ui-states} and~\ref{fig:ui-execution} show it during a feasibility test with paper markers.
 
-The interface includes a camera view and a Run button that initiates marker recognition and command execution. To evaluate its feasibility, we printed ArUco markers on paper and tested whether the system could recognize the markers and translate them into robot movements. These tests successfully demonstrated the basic interaction between visual recognition, command interpretation, and physical robot execution.
+The screen has four parts: a status bar, a short instruction, a live camera view, and a Sequence panel. In the ready state, the status bar reads READY and reports that the interface is connected to Reachy. The instruction asks the student to hold the stack in front of Reachy and press Scan. Until that scan succeeds, the Sequence panel states that the scanned sequence will appear there, as in Fig.~\ref{fig:ui-ready}.
 
-This software prototype provides an additional research artifact for the final project by allowing us to investigate the technical feasibility of tangible programming before integrating markers onto the 3D-printed blocks. It also helps identify future design requirements, including marker placement, camera visibility, recognition reliability, and the interpretation of multiple commands in sequence.
+Pressing Scan moves the interface to RUNNING. Each detected marker is outlined and labeled in the camera view. The Sequence panel then lists the moves in order, placing a plain-language name beside the command sent to the robot, and highlights the step currently underway. In Fig.~\ref{fig:ui-running}, the recognized program is twist body right, look right, and shake head. The status line names the first of those moves while Reachy performs it, and the Scan control changes to Please wait so the stack is not read again mid-dance.
 
-For the selected fabricated component, we retain the 3D-printed modular coding block described in Section 5. Its interlocking structure and recognizable visual design provide the physical foundation for the proposed programming interaction.
+\begin{figure*}[t]
+    \centering
+    \subfloat[Ready state. The student holds a vertical stack of ArUco markers in view of the camera. The interface asks them to press Scan, and the sequence list is still empty.]{%
+        \includegraphics[width=0.48\textwidth]{"additional research output/custom UI - hold up markers.jpg"}%
+        \label{fig:ui-ready}}
+    \hfil
+    \subfloat[Running state. Detected markers are labeled on the camera view, and the sequence panel highlights twist body right as the move Reachy is performing.]{%
+        \includegraphics[width=0.48\textwidth]{"additional research output/custom UI - scanning in process.jpg"}%
+        \label{fig:ui-running}}
+    \caption{Custom interface a student would see while presenting a paper marker stack to Reachy Mini.}
+    \label{fig:ui-states}
+\end{figure*}
+
+The same display stays beside the robot while the sequence runs, so the highlighted line and the physical movement can be checked against each other. Fig.~\ref{fig:reachy-exec} shows Reachy Mini during that test. The interface is RUNNING a six-step sequence and highlights twist body right as the active step. The camera view shows the marker sheet used for that longer program, with each detected marker labeled.
+
+When the last move finishes, the status changes to CELEBRATING and the interface reports that the dance is complete. The full program remains on screen, including the action keys for the recognized markers, as in Fig.~\ref{fig:ui-complete}.
+
+\begin{figure*}[t]
+    \centering
+    \subfloat[Reachy Mini executing the highlighted step. The interface lists a six-step sequence and marks twist body right as the move in progress.]{%
+        \includegraphics[width=0.48\textwidth]{"additional research output/Reachy execute order and indicate which steps .jpg"}%
+        \label{fig:reachy-exec}}
+    \hfil
+    \subfloat[Complete state. The status bar reads CELEBRATING, the interface reports that the dance is complete, and the full three-step sequence remains visible.]{%
+        \includegraphics[width=0.48\textwidth]{"additional research output/complete state.jpg"}%
+        \label{fig:ui-complete}}
+    \caption{Reachy Mini carrying out a scanned sequence while the interface indicates the active step, and the screen after the dance finishes.}
+    \label{fig:ui-execution}
+\end{figure*}
+
+These trials show that the interface can read an ordered stack, display the interpreted program, and have Reachy execute the listed moves one step at a time. The markers in this test were printed on paper. Attaching them to the 3D-printed blocks, and keeping each marker visible to the camera once those blocks are stacked, remains future work. For the selected fabricated component, we retain the 3D-printed modular coding block described in Section 5. Its interlocking structure and recognizable visual design provide the physical foundation for the proposed programming interaction.
 
 
 
