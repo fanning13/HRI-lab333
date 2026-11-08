@@ -58,6 +58,8 @@ For Lab 4, our team developed a preliminary functional prototype, including 3D-p
 
 Our team participated in the K--12 Teacher Panel on October 28, 2026, to gather educators' perspectives on designing an interactive robotic game for middle school students. We collected notes from five teachers.
 
+\textbf{Data collected.} In total, five teachers took part. We recorded written notes during the session and conducted our thematic analysis on the panel transcript (Section~\ref{sec:thematic}). We presented Disco Moo as our proposed game. In it, students use physical coding blocks to program a cow-themed Reachy Mini to perform dance sequences, with the goal of introducing foundational programming concepts through tangible, embodied, and collaborative learning.
+
 We prepared four questions to understand students' programming experiences, common learning challenges, and opportunities for integrating physical robotics into computer science education:
 
 \begin{enumerate}
@@ -75,9 +77,30 @@ Regarding feedback, teachers recommended providing specific, encouraging hints i
 
 Finally, teachers stressed that educational robotics activities should align with curriculum objectives and remain feasible within classroom time and resource constraints.
 
-\subsection{Thematic Analysis}
+Table~\ref{tab:responses} summarizes the responses by question. The last three rows came up in the broader panel discussion, including other students' questions, rather than as direct answers to our four questions.
 
-We conducted an inductive thematic analysis of the October 28 teacher panel transcript. Each team member identified excerpts that bore on the design of Disco Moo and assigned a short descriptive code to each one. The codes concerned learning objectives, accessibility, feedback, engagement, and classroom participation. We then compared codes, discussed differences in interpretation, and grouped related codes into themes. We did not limit coding to our four interview questions. Five themes were especially relevant to the design.
+\begin{table}[t]
+\centering
+\caption{Summary of teacher panel responses}
+\label{tab:responses}
+\begin{tabularx}{\columnwidth}{>{\raggedright\arraybackslash}p{0.27\columnwidth} Y}
+\hline
+\textbf{Question / topic} & \textbf{Panel responses} \\
+\hline
+Q1--Q2: Courses and tools & Block-based programming, Scratch, and Python in middle- and high-school classes; some environments let students move between blocks and Python. Students should understand code ``under the hood,'' not only AI-generated code. \\
+Q3: Concepts and challenges & Introductory games can teach the structure of instructions, including loops and conditionals. Large, open-ended tasks are hard; break work into ``very distinct chunks.'' \\
+Q4: Fit of blocks and robot & Tangible blocks make instruction structure accessible. The robot should make a program's result visible and tie it to an identifiable skill, not serve only as a demo. \\
+Feedback on mistakes & Specific, encouraging hints instead of ``that's wrong, the answer is X''; point to one area to improve. \\
+Collaboration & One robot means waiting and possible domination by confident students; rotate roles and build turn-taking ``into the rules.'' \\
+Curriculum and logistics & The game should add ``an extra bump'' to the curriculum, not ``pretty parts and pieces''; consider class time, preparation, group size, and reusable materials. \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Thematic Analysis}
+\label{sec:thematic}
+
+Two team members, Jiaxin Shen and Yifan Luo, served as independent coders. We conducted an inductive thematic analysis of the October 28 teacher panel transcript. Each coder identified excerpts that bore on the design of Disco Moo and assigned a short descriptive code to each one. The codes concerned learning objectives, accessibility, feedback, engagement, and classroom participation. We then compared codes, discussed differences in interpretation, and grouped related codes into themes. We did not limit coding to our four interview questions. Five themes were especially relevant to the design.
 
 \begin{enumerate}
     \item \textbf{Make computational thinking visible.} Panelists described block coding and Python as common approaches in middle- and high-school classrooms. One teacher emphasized helping students understand what happens ``under the hood'' rather than relying entirely on AI-generated code. Another noted that introductory games can teach the structure of instructions, including loops and conditionals. These comments shaped how we use tangible coding blocks. Reachy's movements are meant to make the consequences of a sequence observable, so the program is not left hidden inside generated code.
@@ -93,6 +116,51 @@ We conducted an inductive thematic analysis of the October 28 teacher panel tran
 
 Together, these themes suggest that an engaging robot is not, by itself, an educational activity. For Disco Moo, the design problem is to connect the appeal of robot movement to a visible programming sequence, a manageable progression of tasks, useful chances to revise, and a participation structure that works in a classroom. Our proposed interface will display the interpreted program and offer debugging cues, and Reachy Mini will give encouraging, hint-based responses. These are design intentions informed by the panel, not outcomes the panel established. Whether they improve learning or participation remains to be evaluated.
 
+Table~\ref{tab:themes} condenses each theme into its design implication.
+
+\begin{table}[t]
+\centering
+\caption{Themes and design implications for Disco Moo}
+\label{tab:themes}
+\begin{tabularx}{\columnwidth}{>{\raggedright\arraybackslash}p{0.33\columnwidth} Y}
+\hline
+\textbf{Theme} & \textbf{Design implication} \\
+\hline
+1. Make computational thinking visible & Prioritize sequencing, loops, and debugging; each block maps to a movement students can observe. \\
+2. Scaffold the activity, not just the code & Progressive dance missions, each introducing one new concept, with instructions on screen and from Reachy. \\
+3. Treat errors as opportunities to revise & Encouraging robot reactions and screen cues that point to the relevant step, instead of ending the turn. \\
+4. Design participation into the rules & Small groups with rotating Planner, Builder, and Debugger roles. \\
+5. Make classroom value and logistics explicit & An explicit programming objective per mission, short missions, and reusable blocks. \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Influence on Robot and Game Design}
+\label{sec:influence}
+
+The panel moved our concept from a simple robot-command game toward a structured educational experience. In our original concept, students took turns arranging coding blocks to complete movement challenges. Correct programs triggered celebratory robot behaviors. Incorrect programs produced disappointed reactions and ended the student's turn. Table~\ref{tab:influence} summarizes how the panel changed this design.
+
+\begin{table}[t]
+\centering
+\caption{Design changes motivated by the teacher panel}
+\label{tab:influence}
+\begin{tabularx}{\columnwidth}{>{\raggedright\arraybackslash}p{0.19\columnwidth} Y Y}
+\hline
+\textbf{Aspect} & \textbf{Initial concept} & \textbf{Revised design (theme)} \\
+\hline
+Game format & Individual turns; a mistake sends the student to the back of the line & Small groups with rotating roles (4) \\
+Mistakes & Disappointed reaction; turn ends & Encouraging reaction, hint, retry (3) \\
+Progression & Single-level movement challenges & Missions from sequences to loops to free choreography (2) \\
+Instructions & Spoken challenge from Reachy & Screen shows the mission and interpreted program; Reachy acts it out (1, 2) \\
+Learning goal & Implicit in the challenge & Explicit objective per mission (5) \\
+\hline
+\end{tabularx}
+\end{table}
+
+\textbf{Game behavior.} Three changes matter most. First, we shifted from elimination-based to collaborative gameplay. Students work in small groups, rotate roles, and debug together instead of losing their turn after a mistake. Second, we introduced progressive learning objectives and constructive feedback. Each mission targets a specific programming concept, and errors become opportunities for reflection and revision. Third, we incorporated multimodal feedback. The screen displays the target choreography, the interpreted program, and debugging hints, while Reachy physically demonstrates the movements.
+
+\textbf{Robot behavior and embodiment.} The panel's emphasis on encouraging feedback also shaped Reachy's persona. A friendly, slightly clumsy cow makes an incorrect program feel like a dance step to fix together rather than a wrong answer (Section~\ref{sec:role}). These changes strengthen the game's educational purpose while keeping its playful character.
+
 \subsection{Reflection}
 
 The teacher panel helped us recognize that designing an educational robotic game involves more than selecting programming concepts. Although our original questions were useful for understanding classroom programming tools and learning difficulties, the discussions revealed additional considerations related to accessibility, student participation, and constructive feedback.
@@ -103,12 +171,22 @@ The panel also challenged our initial assumption that individual turn-taking wou
 
 In future interviews, we would ask more specific follow-up questions about appropriate challenge duration, group size, and methods for evaluating students' understanding of sequencing and loops. Presenting a storyboard or functional prototype could also help teachers provide more concrete feedback on the interaction design.
 
+\textbf{Question suitability.} Our four questions worked well for learning which tools and concepts teachers already use. They did not ask about feedback, participation, or classroom logistics. Those topics came up only through follow-up discussion and other students' questions, yet they produced most of our design changes. Probing questions we would add include:
+\begin{itemize}
+    \item How long should one mission last to fit a class period?
+    \item How many students should share one robot and one set of blocks?
+    \item How do you check whether students understand loops and sequencing?
+    \item What should students who are waiting for the robot do in the meantime?
+\end{itemize}
+We have since drawn the storyboard in Fig.~\ref{fig:storyboard}, which we plan to bring to future teacher conversations.
+
 
 
 \section{Robot Concept and Design Process}
 \label{sec:designprocess}
 
 \subsection{Robot Role and Embodiment}
+\label{sec:role}
 
 Disco Moo is a tangible programming game in which Reachy Mini acts as both a playful dance partner and an interactive coding companion. Inspired by Scratch, the game allows students to construct programs by physically assembling modular coding blocks instead of typing commands on a computer. Each block represents an instruction, such as turning the robot's head, nodding, or repeating a movement.
 
@@ -117,6 +195,60 @@ During gameplay, Reachy presents a dance challenge that students must solve by a
 Reachy is designed with a friendly, cow-inspired persona to make the interaction more playful and approachable for younger learners. We created a felt-backed coat with white yarn and black patches to establish a cow-like appearance while keeping Reachy's head visible. The robot's character is reflected in its dance-oriented challenges and planned encouraging feedback. Rather than functioning solely as a device that executes commands, Disco Moo is intended to act as a learning companion that encourages experimentation and collaborative problem-solving.
 
 Based on the teacher panel feedback, we revised our initial individual turn-taking concept toward collaborative gameplay. Students can work together to plan sequences, assemble blocks, test their programs, and identify errors. The proposed interaction also includes progressively challenging missions and supportive feedback, allowing students to practice fundamental programming concepts without requiring prior Python experience.
+
+\textbf{Interaction role.} Reachy Mini serves as an embodied learning companion and performer, not a strict instructor or evaluator. Its job is to make abstract programming concepts observable through movement, while encouraging students to experiment, collaborate, and learn from mistakes. Students help choreograph Disco Moo, an enthusiastic dancing cow, so the activity has a concrete purpose: they are not simply executing commands but helping a character complete dance missions.
+
+\textbf{Persona.} We designed Disco Moo as a friendly, curious, and slightly clumsy cow. This personality supports an approachable environment in which students feel comfortable experimenting and making mistakes. Because Reachy depends on the students' instructions to dance, the game gives students agency over the robot, and debugging feels like helping a character rather than correcting a failure.
+
+\textbf{How the embodiment supports the role.} The soft white yarn, irregular black spots, and rounded silhouette communicate warmth and friendliness, and the recognizable dairy-cow pattern gives the character a memorable identity. Rather than replacing Reachy Mini's form, the coat builds on it. The wide head, circular eyes, and flexible antennas stay visible, so Reachy can still communicate through gaze, head tilts, nodding, and antenna movement. The persona shapes these expressive behaviors. Reachy wiggles its antennas and dances after a successful program, and tilts its head curiously when students need to debug. Playful sound effects reinforce the character. The coding blocks repeat Reachy's glasses motif, so the objects students hold visibly belong to the same character.
+
+\subsection{Storyboard and Interaction Flow}
+\label{sec:storyboard}
+
+We used storyboarding as our first design method to plan how a group of students would play one mission. Fig.~\ref{fig:storyboard} shows the six panels, which we drew after the teacher panel so that they reflect the revised, collaborative game.
+
+\begin{figure*}[t]
+    \centering
+    \reportphoto[0.82\textwidth]{storyboard.jpg}
+    \caption{Storyboard of one Disco Moo mission. Left column, top to bottom: Disco Moo introduces a dance challenge while the screen shows the target sequence; students arrange the physical coding blocks together; Reachy performs the programmed dance with sounds and expressive movements. Right column: students take the Planner, Builder, and Debugger roles; Reachy scans the blocks and the computer shows the interpreted program; if the sequence is incorrect, Reachy gives a hint, the screen marks the step to revise, and students try again.}
+    \label{fig:storyboard}
+\end{figure*}
+
+The storyboard defines five interaction stages:
+\begin{enumerate}
+    \item \textbf{Challenge presentation.} Disco Moo introduces a dance mission, and the screen displays the target movement sequence.
+    \item \textbf{Role assignment and collaborative programming.} Students take the Planner, Builder, and Debugger roles and arrange the physical command blocks together.
+    \item \textbf{Program recognition.} Reachy's camera captures the block arrangement, and the computer displays the interpreted program.
+    \item \textbf{Execution and feedback.} Reachy performs the programmed movements with sounds, while the screen highlights the step in progress.
+    \item \textbf{Debugging and progression.} If the sequence does not match, Reachy gives a hint and the screen marks the step to check, without revealing the answer. Students revise the blocks and retry, or advance to a harder mission.
+\end{enumerate}
+
+The planned difficulty progression begins with short movement sequences, introduces repeated actions through loops, and ends with students creating their own choreography. Roles rotate between missions so that every student plans, builds, and debugs.
+
+\subsection{Expected Behaviors and Student Needs}
+\label{sec:behaviors}
+
+Reachy's primary movements are head turning, nodding, head shaking, antenna gestures, and body rotation. Each corresponds directly to a coding block, so students can compare their instructions with the robot's behavior. Table~\ref{tab:behaviors} maps each expected behavior to the student need it addresses. Stages 3 and 4 have been demonstrated with paper markers (Section~\ref{sec:addoutput}). The mission display, hints, and encouraging error reactions are planned for the final project.
+
+\begin{table}[t]
+\centering
+\caption{Expected robot behaviors and the student needs they address}
+\label{tab:behaviors}
+\begin{tabularx}{\columnwidth}{>{\raggedright\arraybackslash}p{0.38\columnwidth} Y}
+\hline
+\textbf{Behavior} & \textbf{Student need (theme)} \\
+\hline
+Perform each block as a movement, one step at a time & See how program order produces behavior (1) \\
+Highlight the active step on screen beside the robot & Link instructions to actions; visual support for diverse learners (1, 2) \\
+Introduce missions verbally and on screen & Clear, multimodal instructions; one new concept at a time (2) \\
+Head tilt, encouraging sound, and a hint on a mismatch & Clues instead of answers; safe to make mistakes (3) \\
+Antenna wiggle and celebratory dance on success & Motivation and persistence \\
+Prompt role rotation between missions & Equal participation with one robot (4) \\
+\hline
+\end{tabularx}
+\end{table}
+
+The screen complements Reachy's movements by displaying instructions, the program sequence, and debugging cues, which responds to the teachers' call for clear visual and verbal guidance. Rotating roles and a single shared block set address the teachers' concerns about limited robot access and one student dominating the activity.
 
 \subsection{Iterative Design}
 
@@ -146,7 +278,26 @@ We then turned the embodiment toward a cow. The concept board in Fig.~\ref{fig:m
 
 For Reachy Mini's exterior, we developed the cow concept into a handmade felt-backed yarn coat. We attached white yarn and black patches with hot glue, then refined the fit using rows of retaining loops and adjustable cords. This material construction and fastening system are described in Section~\ref{sec:finaldesign}. The process let us work directly with Reachy's rounded body while keeping its recognizable head visible.
 
-The coding blocks went through a similar pass from sketch to rendered mockup. Our initial plan used color-coded blocks for head movements, antenna movements, body rotation, and repetition. The sketches in Fig.~\ref{fig:block-sketch} divide each block into four faces: the command on the front, Reachy's eyes on the top, an ArUco marker on the back, and the connecting face on the bottom. The mockups in Fig.~\ref{fig:block-mockups} then compared two characters for that block. One wears a jester hood with bells. The other is a plain block with two black eyes and a central post for stacking. The blocks we printed, described in Section 4, kept the Reachy face and the vertical stack, and simplified the face into a glasses-like bridge with four studs.
+The black cow spots took their own iteration (Fig.~\ref{fig:spots}). Our first attempt tied short lengths of black yarn into small tufts, which looked more like pom-poms than cow markings (Fig.~\ref{fig:spots-materials}). We then drew irregular spot outlines on paper templates and coiled black yarn inside each outline to make flat, solid patches (Fig.~\ref{fig:spots-templates}). We arranged the finished patches on the white yarn surface to check size and placement before hot-gluing them on (Fig.~\ref{fig:spots-assembly}). The templates let us try several shapes cheaply and keep the spots irregular, like a real dairy cow's.
+
+\begin{figure*}[t]
+    \centering
+    \subfloat[Materials: white fluffy yarn, black yarn, and the first tufted spots on a paper template.]{%
+        \reportphoto[0.27\textwidth]{cow_spots_materials.jpg}%
+        \label{fig:spots-materials}}
+    \hfil
+    \subfloat[Spot outlines drawn on paper templates and filled with coiled black yarn, next to the black felt backing.]{%
+        \reportphoto[0.43\textwidth]{cow_spots_templates.jpg}%
+        \label{fig:spots-templates}}
+    \hfil
+    \subfloat[Placing the finished spots on the white yarn surface before hot-gluing them.]{%
+        \reportphoto[0.27\textwidth]{cow_spots_assembly.jpg}%
+        \label{fig:spots-assembly}}
+    \caption{Iterating on the cow spots: from yarn tufts to template-shaped coiled patches attached to the coat.}
+    \label{fig:spots}
+\end{figure*}
+
+The coding blocks went through a similar pass from sketch to rendered mockup. Our initial plan used color-coded blocks for head movements, antenna movements, body rotation, and repetition. Because only a few block colors were available, we planned for color to mark a command category while a printed label or symbol identifies the individual action. The sketches in Fig.~\ref{fig:block-sketch} divide each block into four faces: the command on the front, Reachy's eyes on the top, an ArUco marker on the back, and the connecting face on the bottom. The mockups in Fig.~\ref{fig:block-mockups} then compared two characters for that block. One wears a jester hood with bells. The other is a plain block with two black eyes and a central post for stacking. The blocks we printed, described in Section 4, kept the Reachy face and the vertical stack, and simplified the face into a glasses-like bridge with four studs.
 
 \begin{figure*}[t]
     \centering
@@ -168,6 +319,17 @@ In parallel, we explored ArUco markers as a method for translating physical bloc
 The teacher panel also informed an important iteration in our interaction design. Our original game plan involved students completing challenges individually, with incorrect answers ending their turns. Following the teachers' recommendations, we shifted toward collaborative problem-solving, progressive challenges, and constructive feedback.
 
 Throughout the process, we considered fabrication time, available materials, and technical feasibility. 3D printing allowed us to produce reusable, interlocking blocks with consistent geometry, while paper-based marker testing enabled us to evaluate the software before completing the physical integration. These decisions helped us develop a preliminary functional prototype within the lab timeframe while identifying areas for further refinement.
+
+\subsection{Resource, Time, and Cost Constraints}
+\label{sec:constraints}
+
+\textbf{Robot capabilities.} As a tabletop robot, Reachy Mini is better suited to expressive head, antenna, and body movements than to navigation. We therefore chose a dance game in which its existing movements are the core of the interaction, rather than adding new actuators.
+
+\textbf{Embodiment constraints.} The coat has to stay lightweight and removable and must not restrict neck movement, cover the camera, or interfere with the antennas and ventilation. We therefore kept the head uncovered and limited the coat to the body.
+
+\textbf{Cost.} Felt, yarn, paper templates, and hot glue are inexpensive and easy to rework. They let us change the character's appearance without modeling or printing a new robot shell. The limited range of block colors led to the category-color plus label scheme described above.
+
+\textbf{Time.} Within the lab timeframe, we tested recognition and execution with paper markers before attaching them to the blocks, so the software-to-robot pipeline could be validated while block printing and tolerance testing went on in parallel.
 
 
 
@@ -199,6 +361,8 @@ As our project developed toward the cow-inspired Disco Moo concept, the nametag 
     \label{fig:lasercutnametag}
 \end{figure}
 
+The design file for the nametag, \texttt{Reachy Name Tag.ai}, is submitted with this report.
+
 % Fabrication design file: designs/Reachy_Name_Tag.ai
 
 \subsection{Custom Laser-Cut Part: CODE Farmland Sign}
@@ -225,6 +389,8 @@ Laser cutting offered a straightforward fabrication method for this component. F
     \caption{Fabrication of the CODE Farmland sign and slotted base from 5\,mm wood. Engraving forms the Reachy Mini motif and Farmland text, while laser cutting defines the profiles, CODE lettering, and connection features.}
     \label{fig:farmlandfabrication}
 \end{figure}
+
+The design file for the sign and base, \texttt{CODE\_Farmland\_Reachy\_80mm.ai}, is submitted with this report.
 
 % Fabrication design file: designs/CODE_Farmland.ai
 % Supplied photographs should be placed in Lab4/images/:
@@ -270,7 +436,7 @@ We constructed the coat on a felt backing. First, we wrapped the felt around Rea
 
 \subsection{Design Methods and Iterations}
 
-Our process combined visual concept development, physical prototyping, and fitting the prototype on the robot. The sketches, concept boards, and digital models described in Section~\ref{sec:designprocess} helped us explore character identities and coordinate the appearance of the robot and blocks. Early explorations included the Olaf-inspired nametag and the jester studies. The later cow concept developed into a soft costume and a farm-themed activity setting.
+Our process combined visual concept development, physical prototyping, and fitting the prototype on the robot. The sketches, concept boards, and digital models described in Section~\ref{sec:designprocess} helped us explore character identities and coordinate the appearance of the robot and blocks. Early explorations included the Olaf-inspired nametag and the jester studies. The later cow concept developed into a soft costume and a farm-themed activity setting. In parallel, the storyboard in Fig.~\ref{fig:storyboard} worked out the interaction itself: how a group receives a mission, divides roles, scans its blocks, and debugs after Reachy's hint.
 
 Physical prototyping let us investigate how the materials would actually conform to Reachy. An initial felt wrap established the coat's size, and applying the yarn in stages let us develop its coverage and appearance. Fitting the coat on the robot revealed a problem that was difficult to resolve through a flat outline alone: the fabric did not naturally follow the rounded body.
 
@@ -319,6 +485,7 @@ This experience demonstrated the value of physical prototyping alongside visual 
 \section{Discussion and Future Work}
 
 \subsection{Additional Research Output}
+\label{sec:addoutput}
 
 In addition to the physical coding blocks and the robot embodiment, we developed a camera-based interface that reads an ordered stack of ArUco markers and sends the corresponding commands to Reachy Mini. This is the screen a student would use to check which program the camera recognized and which step Reachy is carrying out. The prototype is titled Reachy LEGO. Figures~\ref{fig:ui-states} and~\ref{fig:ui-execution} show it during a feasibility test with paper markers. Fig.~\ref{fig:sample-marker} shows one of those cards. The pattern is an ArUco marker from the \texttt{DICT\_6X6\_250} dictionary. Under it, the card prints the move name, the command \texttt{head.turn\_right()}, and the instruction to attach the card flat and facing the camera so that every marker in the stack remains visible.
 
