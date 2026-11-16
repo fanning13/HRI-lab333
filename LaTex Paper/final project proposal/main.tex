@@ -3,6 +3,8 @@
 \usepackage[margin=1in]{geometry}
 \usepackage{array,tabularx}
 \usepackage{graphicx,xcolor,float}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
 \usepackage{cite,balance}
 \usepackage[hidelinks]{hyperref}
 
@@ -100,30 +102,68 @@ After Scan, detection, ordering, acceptance, on-screen playback, motor execution
 
 \subsection{Architecture Diagram}
 
-Figure~\ref{fig:architecture} places the social turn around the implemented scan-and-play cycle. Students close the loop by revising the stack.
+Figure~\ref{fig:architecture} is the process graph for one reply. Panel~(a) is the social turn carried by the group and the webpage. Panel~(b) is the scanner, entered when the group presses Scan. Students close the loop by revising the stack and scanning again.
 
 \begin{figure}[H]
 \centering
-\fbox{\parbox[c]{0.92\linewidth}{
-\centering
-\small
-\textbf{Webpage scenario; Actor performs}\\
-$\downarrow$\\
-\textbf{Teammates stack a gesture reply}\\
-$\downarrow$\\
-\textbf{Scan: one frame from Reachy's camera}\\
-$\downarrow$\\
-\textbf{ArUco detection, top to bottom}\\
-$\downarrow$\\
-\textbf{Registry check (IDs 10--16); else ERROR, robot still}\\
-$\downarrow$\\
-\textbf{Show sequence, then play each action key}\\
-$\downarrow$\\
-\textbf{Fixed celebration, then READY}\\
-$\downarrow$\\
-\textbf{Actor reacts; webpage advances; group may rescan}
-}}
-\caption{Social turn around the implemented scan-and-play controller. The webpage and the Actor give the gesture sequence its story; the controller validates the stack and embodies it.}
+\setbox0=\hbox{%
+\begin{tikzpicture}[
+  font=\footnotesize,
+  >={Stealth[length=2.1mm]},
+  social/.style={draw, dashed, rounded corners=2pt, align=center,
+    minimum width=3.55cm, minimum height=0.78cm, inner sep=2pt},
+  state/.style={draw, rounded corners=2pt, align=center,
+    minimum width=3.65cm, minimum height=0.74cm, inner sep=2pt},
+  bad/.style={draw, very thick, rounded corners=2pt, align=center,
+    minimum width=2.45cm, minimum height=0.86cm, inner sep=2pt},
+  lab/.style={font=\scriptsize, align=center, inner sep=1pt}
+]
+% (a) Social turn. The spine sits above the scanner spine in (b).
+\node[font=\footnotesize\bfseries, anchor=south] at (0,0.48) {(a) Social turn};
+\node[social] (scenario) at (0,0) {Webpage scenario};
+\node[social] (actor) at (0,-1.15) {Actor performs};
+\node[social] (stack) at (0,-2.30) {Team stacks blocks};
+\node[social] (press) at (0,-3.45) {Press Scan};
+\node[social] (played) at (0,-4.60) {Reachy plays the stack};
+\node[social] (react) at (0,-5.75) {Actor reacts};
+\node[social] (story) at (0,-6.90) {Webpage advances};
+\draw[->] (scenario) -- (actor);
+\draw[->] (actor) -- (stack);
+\draw[->] (stack) -- (press);
+\draw[->] (press) -- (played);
+\draw[->] (played) -- (react);
+\draw[->] (react) -- (story);
+\draw[->] (story.west) -- ++(-0.85,0) node[lab, left] {revise} |- (stack.west);
+
+% (b) Scanner. Press Scan enters READY.
+\begin{scope}[yshift=-8.85cm]
+\node[font=\footnotesize\bfseries, anchor=south] at (0,0.48) {(b) Scanner states};
+\node[state] (ready) at (0,0) {READY};
+\node[state] (scanning) at (0,-1.55) {SCANNING};
+\node[state] (show) at (0,-2.85) {SHOWING\_SEQUENCE};
+\node[state] (run) at (0,-4.15) {RUNNING\\next block};
+\node[state] (cele) at (0,-5.45) {CELEBRATING};
+\node[bad] (err) at (4.05,-1.55) {ERROR\\robot still};
+\draw[->] (ready) -- node[lab, right] {Scan} (scanning);
+\draw[->] (scanning) -- node[lab, right] {known} (show);
+\draw[->] (scanning.east) -- node[lab, above] {reject} (err.west);
+\draw[->] (show) -- (run);
+\draw[->] (run) -- node[lab, left] {last block} (cele);
+\draw[->] (cele.west) -- node[lab, above] {done} ++(-0.95,0) |- (ready.west);
+\draw[->] (run.west) .. controls +(-0.42,0.32) and +(-0.42,-0.32) .. (run.west);
+\draw[->] (run.east) -- node[lab, above, pos=0.2] {fault} ++(0.55,0) |- (err.south);
+\draw[->] (cele.east) -- ++(0.55,0) |- (err.south);
+\draw[->, shorten >=3pt] (err.north) -- ++(0,0.46) -|
+  node[lab, above, pos=0.45] {Scan again} (scanning.north east);
+\end{scope}
+\end{tikzpicture}%
+}%
+\ifdim\wd0>\linewidth
+  \resizebox{\linewidth}{!}{\box0}%
+\else
+  \box0
+\fi
+\caption{Process graph for one Moo-d Lab reply. Dashed boxes are the social turn. Solid boxes are implemented scanner states. Reject means an empty view, a missing frame, or an unknown marker, and Reachy stays still. A motion fault during RUNNING or CELEBRATING also enters ERROR. After the celebration the controller returns to READY, the Actor reacts, and the webpage advances.}
 \label{fig:architecture}
 \end{figure}
 
