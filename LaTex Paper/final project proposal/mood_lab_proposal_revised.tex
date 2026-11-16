@@ -2,6 +2,8 @@
 \usepackage[margin=1in]{geometry}
 \usepackage{array,tabularx}
 \usepackage{graphicx,xcolor,float}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
 \usepackage{cite,balance}
 \usepackage[hidelinks]{hyperref}
 
@@ -77,36 +79,83 @@ Reachy Mini sits at the rear of a tabletop facing a group of four or five studen
 
 \section{Robot Control Architecture}
 \subsection{Architecture Design}
-A hybrid, closed-loop finite-state machine (FSM) combines predefined motor routines with camera-driven decisions. States are READY, SCENARIO, ACTING, SCANNING, VALIDATING, EXECUTING, ACTOR\_RESPONSE, STORY\_OUTCOME, DEBUGGING, and CELEBRATING. The webpage presents a scenario and target programming constraint, cues the Actor, scans and validates the group program, executes it after the Actor's performance, and collects the Actor's selected reaction. The story engine then branches to a scripted consequence or retry. The screen provides story feedback; the robot provides embodied feedback. Scan failures and invalid syntax are handled separately from logical errors.
+In \emph{Moo-d Lab: The Emotion Factory}, Reachy's reply is produced by a student-triggered finite-state machine. The implemented states are READY, SCANNING, SHOWING\_SEQUENCE, RUNNING, CELEBRATING, and ERROR. From READY, the display shows the robot's camera while the group plans. SCANNING captures one frame when a student presses Scan. A stack whose markers all belong to the gesture registry passes through SHOWING\_SEQUENCE, which lists the program, and RUNNING, which plays each gesture while the active line is highlighted. CELEBRATING then runs a short fixed ending and returns to READY. A missing frame, an empty view, an unrecognized marker, or a motion fault enters ERROR, the robot stays still or stops at the failed step, and the group may scan again.
+
+The machine is hybrid. At scan time it makes one discrete decision, accepting the whole stack or rejecting it. After acceptance, playback is an open sequence of predefined poses. The outer loop closes through the group. The webpage gives one student, the Actor, a short social scenario; the Actor performs it; the other students stack gesture blocks as Moo's response. Reachy embodies that stack, the Actor reacts, and the webpage carries the story forward from the completed performance. The group may restack and rescan. A greeting, a happy dance, or a reassuring reply is fixed by the scenario and by the blocks the group chooses. The controller makes that order visible and then performs it.
 
 \subsection{Implementation Details}
-Our Lab 4 camera interface detects paper ArUco markers and executes corresponding Reachy Mini movements. The proposed pipeline (1) detects marker IDs and ordering, (2) maps IDs to a constrained command vocabulary, (3) expands REPEAT instructions, (4) checks program validity, (5) executes safe robot movements, and (6) evaluates mission-specific rules and waits for the Actor's selected response before branching the story. The screen displays the recognized sequence and highlights the current command. The webpage mission engine stores target patterns for Missions 1--2; Mission 3 accepts any valid supported program, records the students' rationale, and uses a small authored branching story with Actor-selected reactions. Audio cues are prerecorded and triggered at defined points; they do not require a speech-generation pipeline. Remaining work includes reliable block scanning, loop interpretation, screen/robot synchronization, and feedback condition logic, plus a simple webpage interface for scripted actor prompts, reaction buttons, and story branches.
+The scanner opens a network connection to the Reachy Mini daemon, enables the motors, and settles to a neutral pose. Automatic body yaw is disabled, so a head turn and a body twist stay independent commands. On each Scan, OpenCV reads ArUco markers from dictionary \texttt{DICT\_6X6\_250} in that single frame and orders them from the top of the image to the bottom. The top block is the first gesture. Two copies of the same marker remain two steps, so a repeated feeling is programmed by stacking the same block again.
+
+Marker IDs 10--16 are the vocabulary: look left, look right, nod, shake head, wiggle antennas, twist body left, and twist body right. Each ID resolves to a student-facing label, a line of display syntax, and an action key. Students read the syntax on screen. The action key selects a handler that sends a short chain of \texttt{goto\_target} poses. Each pose lasts at least 0.5\,s and blocks until the SDK reports that the move has finished. Commanded angles stay inside the conservative limits carried forward from earlier labs: head yaw and pitch within $18^{\circ}$, antennas within 0.50\,rad, and body yaw within 0.20\,rad. An unknown or empty stack is turned away before the first pose.
+
+Every accepted program ends with the same celebration: the antennas sweep, the head nods, and the robot returns to neutral. The controller appends this dance after the last student block, which gives each social reply a shared closing beat. The on-screen list, with the current step highlighted, is the visual feedback for the group. A companion webpage can take that completed program, together with the Actor's reaction, as the cue for the next story beat. Scenario text, reaction choices, and prerecorded sounds live on that page. Joining the page to the scanner is the remaining integration; the scan-and-play cycle is already implemented.
 
 \subsection{Level of Autonomy}
-After students request a scan, recognition, parsing, motion execution, rule-based evaluation, and screen/audio feedback are intended to run autonomously. Operators may initialize sessions, calibrate the camera, or recover from faults. Any Wizard-of-Oz assistance for transitions or audio will be recorded and reported separately.
+After Scan, detection, ordering, acceptance, on-screen playback, motor execution, and the celebration proceed on their own. Scan stays disabled until the cycle returns to READY or ERROR. A facilitator opens the session, confirms the connection, and can recover from a fault. The Actor's scene and the group's planning are human turns around this cycle. Any facilitator help with webpage transitions will be recorded apart from the autonomous scan-and-play behavior.
 
 \subsection{Architecture Diagram}
-Figure~\ref{fig:architecture} shows how the physical program drives embodied action and narrative consequences. Student revision closes the loop.
+Figure~\ref{fig:architecture} is the process graph for one reply. Panel~(a) is the social turn carried by the group and the webpage. Panel~(b) is the scanner, entered when the group presses Scan. Students close the loop by revising the stack and scanning again.
+
 \begin{figure}[H]
 \centering
-\fbox{\parbox[c]{0.92\linewidth}{\centering\small
-\textbf{Webpage: Scenario + Actor Cue}\\
-$\downarrow$\\
-\textbf{Actor Performs; Team Builds / Scans}\\
-$\downarrow$\\
-\textbf{Camera + ArUco Detection and Ordering}\\
-$\downarrow$\\
-\textbf{Parser + Loop Expansion + Validation}\\
-$\downarrow$\\
-\textbf{FSM / Mission Rule Evaluator}\\
-$\downarrow$\\
-\textbf{Reachy Motor Actions + Audio Cues}\\
-$\downarrow$\\
-\textbf{Actor Selects Reaction; Webpage Branches}\\
-$\downarrow$\\
-\textbf{Group Discusses / Revises / Rescans}
-}}
-\caption{Physical--digital control loop linking narrative missions, tangible programming, embodied robot behavior, and student debugging.}
+\setbox0=\hbox{%
+\begin{tikzpicture}[
+  font=\footnotesize,
+  >={Stealth[length=2.1mm]},
+  social/.style={draw, dashed, rounded corners=2pt, align=center,
+    minimum width=3.55cm, minimum height=0.78cm, inner sep=2pt},
+  state/.style={draw, rounded corners=2pt, align=center,
+    minimum width=3.65cm, minimum height=0.74cm, inner sep=2pt},
+  bad/.style={draw, very thick, rounded corners=2pt, align=center,
+    minimum width=2.45cm, minimum height=0.86cm, inner sep=2pt},
+  lab/.style={font=\scriptsize, align=center, inner sep=1pt}
+]
+% (a) Social turn. The spine sits above the scanner spine in (b).
+\node[font=\footnotesize\bfseries, anchor=south] at (0,0.48) {(a) Social turn};
+\node[social] (scenario) at (0,0) {Webpage scenario};
+\node[social] (actor) at (0,-1.15) {Actor performs};
+\node[social] (stack) at (0,-2.30) {Team stacks blocks};
+\node[social] (press) at (0,-3.45) {Press Scan};
+\node[social] (played) at (0,-4.60) {Reachy plays the stack};
+\node[social] (react) at (0,-5.75) {Actor reacts};
+\node[social] (story) at (0,-6.90) {Webpage advances};
+\draw[->] (scenario) -- (actor);
+\draw[->] (actor) -- (stack);
+\draw[->] (stack) -- (press);
+\draw[->] (press) -- (played);
+\draw[->] (played) -- (react);
+\draw[->] (react) -- (story);
+\draw[->] (story.west) -- ++(-0.85,0) node[lab, left] {revise} |- (stack.west);
+
+% (b) Scanner. Press Scan enters READY.
+\begin{scope}[yshift=-8.85cm]
+\node[font=\footnotesize\bfseries, anchor=south] at (0,0.48) {(b) Scanner states};
+\node[state] (ready) at (0,0) {READY};
+\node[state] (scanning) at (0,-1.55) {SCANNING};
+\node[state] (show) at (0,-2.85) {SHOWING\_SEQUENCE};
+\node[state] (run) at (0,-4.15) {RUNNING\\next block};
+\node[state] (cele) at (0,-5.45) {CELEBRATING};
+\node[bad] (err) at (4.05,-1.55) {ERROR\\robot still};
+\draw[->] (ready) -- node[lab, right] {Scan} (scanning);
+\draw[->] (scanning) -- node[lab, right] {known} (show);
+\draw[->] (scanning.east) -- node[lab, above] {reject} (err.west);
+\draw[->] (show) -- (run);
+\draw[->] (run) -- node[lab, left] {last block} (cele);
+\draw[->] (cele.west) -- node[lab, above] {done} ++(-0.95,0) |- (ready.west);
+\draw[->] (run.west) .. controls +(-0.42,0.32) and +(-0.42,-0.32) .. (run.west);
+\draw[->] (run.east) -- node[lab, above, pos=0.2] {fault} ++(0.55,0) |- (err.south);
+\draw[->] (cele.east) -- ++(0.55,0) |- (err.south);
+\draw[->, shorten >=3pt] (err.north) -- ++(0,0.46) -|
+  node[lab, above, pos=0.45] {Scan again} (scanning.north east);
+\end{scope}
+\end{tikzpicture}%
+}%
+\ifdim\wd0>\linewidth
+  \resizebox{\linewidth}{!}{\box0}%
+\else
+  \box0
+\fi
+\caption{Process graph for one Moo-d Lab reply. Dashed boxes are the social turn. Solid boxes are implemented scanner states. Reject means an empty view, a missing frame, or an unknown marker, and Reachy stays still. A motion fault during RUNNING or CELEBRATING also enters ERROR. After the celebration the controller returns to READY, the Actor reacts, and the webpage advances.}
 \label{fig:architecture}
 \end{figure}
 
