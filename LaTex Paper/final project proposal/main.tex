@@ -82,40 +82,48 @@ Reachy Mini sits at the rear of a tabletop facing 3--4 students, with a visible 
 
 \subsection{Architecture Design}
 
-A hybrid, closed-loop finite-state machine (FSM) combines predefined motions with camera-driven decisions. States are READY, CHALLENGE, SCANNING, EXECUTING, EVALUATING, DEBUGGING, and CELEBRATING. The FSM presents a task, reads markers, runs the program, compares it with the target, and either offers a retry or advances. Explicit states support predictable behavior and recovery from recognition errors.
+In \emph{Moo-d Lab: The Emotion Factory}, Reachy's reply is produced by a student-triggered finite-state machine. The implemented states are READY, SCANNING, SHOWING\_SEQUENCE, RUNNING, CELEBRATING, and ERROR. From READY, the display shows the robot's camera while the group plans. SCANNING captures one frame when a student presses Scan. A stack whose markers all belong to the gesture registry passes through SHOWING\_SEQUENCE, which lists the program, and RUNNING, which plays each gesture while the active line is highlighted. CELEBRATING then runs a short fixed ending and returns to READY. A missing frame, an empty view, an unrecognized marker, or a motion fault enters ERROR, the robot stays still or stops at the failed step, and the group may scan again.
+
+The machine is hybrid. At scan time it makes one discrete decision, accepting the whole stack or rejecting it. After acceptance, playback is an open sequence of predefined poses. The outer loop closes through the group. The webpage gives one student, the Actor, a short social scenario; the Actor performs it; the other students stack gesture blocks as Moo's response. Reachy embodies that stack, the Actor reacts, and the webpage carries the story forward from the completed performance. The group may restack and rescan. A greeting, a happy dance, or a reassuring reply is fixed by the scenario and by the blocks the group chooses. The controller makes that order visible and then performs it.
 
 \subsection{Implementation Details}
 
-Our Lab 4 camera interface already detects paper ArUco markers and executes corresponding Reachy Mini movements. The proposed pipeline detects marker IDs and order, maps them to movement commands, expands loop instructions, and sends actions to the robot's motor interface. The screen displays recognized commands and highlights the active step. Mission comparison triggers a success response, specific hint, or scan-error message. Remaining work includes testing markers on connected blocks, loops, and feedback logic.
+The scanner opens a network connection to the Reachy Mini daemon, enables the motors, and settles to a neutral pose. Automatic body yaw is disabled, so a head turn and a body twist stay independent commands. On each Scan, OpenCV reads ArUco markers from dictionary \texttt{DICT\_6X6\_250} in that single frame and orders them from the top of the image to the bottom. The top block is the first gesture. Two copies of the same marker remain two steps, so a repeated feeling is programmed by stacking the same block again.
+
+Marker IDs 10--16 are the vocabulary: look left, look right, nod, shake head, wiggle antennas, twist body left, and twist body right. Each ID resolves to a student-facing label, a line of display syntax, and an action key. Students read the syntax on screen. The action key selects a handler that sends a short chain of \texttt{goto\_target} poses. Each pose lasts at least 0.5\,s and blocks until the SDK reports that the move has finished. Commanded angles stay inside the conservative limits carried forward from earlier labs: head yaw and pitch within $18^{\circ}$, antennas within 0.50\,rad, and body yaw within 0.20\,rad. An unknown or empty stack is turned away before the first pose.
+
+Every accepted program ends with the same celebration: the antennas sweep, the head nods, and the robot returns to neutral. The controller appends this dance after the last student block, which gives each social reply a shared closing beat. The on-screen list, with the current step highlighted, is the visual feedback for the group. A companion webpage can take that completed program, together with the Actor's reaction, as the cue for the next story beat. Scenario text, reaction choices, and prerecorded sounds live on that page. Joining the page to the scanner is the remaining integration; the scan-and-play cycle is already implemented.
 
 \subsection{Level of Autonomy}
 
-After students request a scan, marker recognition, command interpretation, execution, and mission evaluation operate autonomously. Operators may initialize sessions, calibrate the camera, or recover from faults. Wizard-of-Oz assistance, if needed for speech or transitions, will be logged separately from autonomous behavior.
+After Scan, detection, ordering, acceptance, on-screen playback, motor execution, and the celebration proceed on their own. Scan stays disabled until the cycle returns to READY or ERROR. A facilitator opens the session, confirms the connection, and can recover from a fault. The Actor's scene and the group's planning are human turns around this cycle. Any facilitator help with webpage transitions will be recorded apart from the autonomous scan-and-play behavior.
 
 \subsection{Architecture Diagram}
 
-Figure~\ref{fig:architecture} connects sensing, decisions, and motor output; students close the interaction loop by revising and rescanning.
+Figure~\ref{fig:architecture} places the social turn around the implemented scan-and-play cycle. Students close the loop by revising the stack.
 
 \begin{figure}[H]
 \centering
 \fbox{\parbox[c]{0.92\linewidth}{
 \centering
 \small
-\textbf{Reachy Mini Camera (ArUco images)}\\
+\textbf{Webpage scenario; Actor performs}\\
 $\downarrow$\\
-\textbf{Marker Detection and Sequence Ordering}\\
+\textbf{Teammates stack a gesture reply}\\
 $\downarrow$\\
-\textbf{Command Interpreter (actions and loops)}\\
+\textbf{Scan: one frame from Reachy's camera}\\
 $\downarrow$\\
-\textbf{FSM / Mission Evaluation}\\
+\textbf{ArUco detection, top to bottom}\\
 $\downarrow$\\
-\textbf{Robot Motor Controller}\\
+\textbf{Registry check (IDs 10--16); else ERROR, robot still}\\
 $\downarrow$\\
-\textbf{Head, Body, Antenna Motion + Feedback}\\
+\textbf{Show sequence, then play each action key}\\
 $\downarrow$\\
-\textbf{Student Observation, Revision, Rescan}
+\textbf{Fixed celebration, then READY}\\
+$\downarrow$\\
+\textbf{Actor reacts; webpage advances; group may rescan}
 }}
-\caption{Hybrid control pipeline from visual input to motor commands and student-driven feedback.}
+\caption{Social turn around the implemented scan-and-play controller. The webpage and the Actor give the gesture sequence its story; the controller validates the stack and embodies it.}
 \label{fig:architecture}
 \end{figure}
 
